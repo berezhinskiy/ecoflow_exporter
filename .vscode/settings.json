@@ -1,0 +1,5 @@
+{
+    "python.formatting.provider": "black",
+    "python.formatting.blackArgs": ["--line-length", "500"],
+    "python.linting.enabled": true
+}
