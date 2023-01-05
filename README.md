@@ -1,7 +1,8 @@
 # ecoflow-mqtt-prometheus-exporter
 
-A Simple Ecoflow MQTT -> prometheus metrics converter
-You do not need to create REST `APP_KEY` and `SECRET_KEY` since MQTT credentials can be extracted by `api.ecoflow.com` (see [Usage](#usage) section)
+An Ecoflow MQTT to prometheus metrics converter
+
+It is not required to request REST `APP_KEY` and `SECRET_KEY` since MQTT credentials can be extracted from `api.ecoflow.com` (see [Usage](#usage) section)
 
 ![Dashboard](Grafana/EcoflowMQTT.png?raw=true)
 
