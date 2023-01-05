@@ -49,8 +49,8 @@ Ecoflow password:
     "url": "mqtt.ecoflow.com",
     "port": "8883",
     "protocol": "mqtts",
-    "certificateAccount": "app-b12d8478615c4ceaa103446f606d41bd",
-    "certificatePassword": "26dd5fcff0bf4420bfcdaecfc18418e6"
+    "certificateAccount": "app-b12d847861bb84eaa103446f606d41bb",
+    "certificatePassword": "28dd5feff0bf4420bfcdaecfc18418a6"
   }
 }
 ```
