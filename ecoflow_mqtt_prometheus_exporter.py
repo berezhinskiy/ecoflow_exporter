@@ -1072,13 +1072,14 @@ class EcoflowMQTT():
         self.username = username
         self.password = password
         self.topic = f"/app/device/property/{device_sn}"
-        self.client = mqtt.Client(f'python-mqtt-{random.randint(0, 100)}', clean_session=True)
+        self.client = mqtt.Client(f'python-mqtt-{random.randint(0, 100)}')
 
     def connect(self):
         self.client.username_pw_set(self.username, self.password)
         self.client.tls_set(certfile=None, keyfile=None, cert_reqs=ssl.CERT_REQUIRED)
         self.client.tls_insecure_set(False)
         self.client.on_connect = self.on_connect
+        self.client.on_disconnect = self.on_disconnect
         self.client.on_message = self.on_message
         self.client.connect(self.broker_addr, self.broker_port)
         self.client.loop_start()
