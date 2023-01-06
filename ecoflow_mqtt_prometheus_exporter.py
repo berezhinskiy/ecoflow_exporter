@@ -1005,6 +1005,8 @@ class EcoflowMetrics:
             pass
         try:
             self.inv_ac_in_vol.labels(device_sn=self.device_sn).set(message["inv.acInVol"])
+            if int(message["inv.acInVol"]) == 0:
+                self.inv_ac_in_amp.labels(device_sn=self.device_sn).set(0)
             message.pop("inv.acInVol", None)
         except KeyError:
             pass
