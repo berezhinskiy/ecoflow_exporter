@@ -1105,7 +1105,7 @@ class EcoflowMQTT():
                 f"Another error {rc} occured, please check the mqtt-paho documentation")
         return client
 
-    def on_disconnect(client, userdata, rc):
+    def on_disconnect(self, client, userdata, rc):
         if rc != 0:
             log.warning(f"Unexpected MQTT disconnection: {rc}. Will auto-reconnect")
 
