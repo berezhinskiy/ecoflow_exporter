@@ -1072,21 +1072,21 @@ class EcoflowMQTT():
         self.username = username
         self.password = password
         self.topic = f"/app/device/property/{device_sn}"
+        self.client = mqtt.Client(f'python-mqtt-{random.randint(0, 100)}', clean_session=True)
 
     def connect(self):
-        client = mqtt.Client(f'python-mqtt-{random.randint(0, 100)}')
-        client.username_pw_set(self.username, self.password)
-        client.tls_set(certfile=None, keyfile=None, cert_reqs=ssl.CERT_REQUIRED)
-        client.tls_insecure_set(False)
-        client.on_connect = self.on_connect
-        client.on_message = self.on_message
-        client.connect(self.broker_addr, self.broker_port)
-        client.loop_start()
-        client.subscribe(self.topic)
+        self.client.username_pw_set(self.username, self.password)
+        self.client.tls_set(certfile=None, keyfile=None, cert_reqs=ssl.CERT_REQUIRED)
+        self.client.tls_insecure_set(False)
+        self.client.on_connect = self.on_connect
+        self.client.on_message = self.on_message
+        self.client.connect(self.broker_addr, self.broker_port)
+        self.client.loop_start()
 
     def on_connect(self, client, userdata, flags, rc):
         if rc == 0:
-            log.info("Connected to MQTT Broker!")
+            log.info(f"Connected to MQTT Broker {self.broker_addr}:{self.broker_port}")
+            self.client.subscribe(self.topic)
         elif rc == -1:
             log.error("Connection timed out")
         elif rc == 1:
@@ -1103,6 +1103,10 @@ class EcoflowMQTT():
             log.error(
                 f"Another error {rc} occured, please check the mqtt-paho documentation")
         return client
+
+    def on_disconnect(client, userdata, rc):
+        if rc != 0:
+            log.warning(f"Unexpected MQTT disconnection: {rc}. Will auto-reconnect")
 
     def on_message(self, client, userdata, message):
         self.message_queue.put(message.payload.decode("utf-8"))
