@@ -4,13 +4,13 @@ An Ecoflow MQTT to prometheus metrics converter
 
 It is not required to request REST `APP_KEY` and `SECRET_KEY` since MQTT credentials can be extracted from `api.ecoflow.com` (see [Usage](#usage) section)
 
-![Dashboard](Grafana/EcoflowMQTT.png?raw=true)
+[![Dashboard](images/EcoflowMQTT.png?raw=true)](https://grafana.com/grafana/dashboards/17812-ecoflow-mqtt/)
 
 ## Disclaimers
 
 Disclaimer 1: This project is in no way connected to Ecoflow the company, and is entirely developed as a fun project (with no guarantees of anything)
 
-Disclaimer 2: This has only been tested with __Ecoflow Delta 2__
+Disclaimer 2: This has only been tested with __Ecoflow DELTA 2__
 
 ## About
 
@@ -20,8 +20,8 @@ The project provides:
 
 - Simple python program that accepts a number of arguments to collect information about an Ecoflow product and then exports the collected metrics to a prometheus endpoint
 - Bash script to extract MQTT credentials
-- [Docker image](https://hub.docker.com/repository/docker/brendanobra/ecoflow-prometheus-exporter) for convenience
-- Grafana Dashboard source
+- [Docker image](https://hub.docker.com/repository/docker/berezhinskiy/ecoflow-mqtt-prometheus-exporter) for your convenience
+- [Dashboard for Grafana](https://grafana.com/grafana/dashboards/17812-ecoflow-mqtt/)
 
 All metrics produced are prefixed with `ecoflow` and reports label `device_sn` for multiple device support
 
