@@ -81,6 +81,7 @@ will run the image with the exporter running on *:9090
 
 ## Exported metrics
 
+- `ecoflow_online`
 - `ecoflow_mppt_car_out_vol`
 - `ecoflow_mppt_car_state`
 - `ecoflow_mppt_discharge_type`

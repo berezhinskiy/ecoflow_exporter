@@ -33,6 +33,7 @@ class EcoflowMetrics:
         # name_suffix = convert_to_prometheus_name(name.split(".")[1])
         # print(f"{name_prefix}_{name_suffix}")
 
+        self.online = Gauge("online", "online", labelnames=["device_sn"], namespace="ecoflow")
         self.mppt_car_out_vol = Gauge("mppt_car_out_vol", "mppt.carOutVol", labelnames=["device_sn"], namespace="ecoflow")
         self.mppt_car_state = Gauge("mppt_car_state", "mppt.carState", labelnames=["device_sn"], namespace="ecoflow")
         self.mppt_discharge_type = Gauge("mppt_discharge_type", "mppt.dischargeType", labelnames=["device_sn"], namespace="ecoflow")
@@ -207,8 +208,10 @@ class EcoflowMetrics:
     def fetch(self):
         if self.message_queue.qsize() > 0:
             log.info(f"Processing {self.message_queue.qsize()} event(s) from the message queue")
+            self.online.labels(device_sn=self.device_sn).set(1)
         else:
             log.info("Message queue is empty")
+            self.online.labels(device_sn=self.device_sn).set(0)
 
         while not self.message_queue.empty():
             message = self.message_queue.get()
