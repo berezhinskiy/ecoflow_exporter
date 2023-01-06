@@ -67,11 +67,13 @@ Required:
 
 Optional:
 
-`MQTT_BROKER` - (default: mqtt.ecoflow.com)
+`MQTT_BROKER` - (default: `mqtt.ecoflow.com`)
 
-`MQTT_PORT` - (default: 8883)
+`MQTT_PORT` - (default: `8883`)
 
-`EXPORTER_PORT` - (default: 9090)
+`EXPORTER_PORT` - (default: `9090`)
+
+`LOG_LEVEL` - (default: `INFO`) Possible values: `DEBUG`, `INFO`, `WARNING`, `ERROR`
 
 Example of running docker image:
 
@@ -82,6 +84,7 @@ will run the image with the exporter running on *:9090
 ## Exported metrics
 
 - `ecoflow_online`
+- `ecoflow_mqtt_messages_receive_total`
 - `ecoflow_mppt_car_out_vol`
 - `ecoflow_mppt_car_state`
 - `ecoflow_mppt_discharge_type`
