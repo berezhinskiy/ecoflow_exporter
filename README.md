@@ -1,4 +1,4 @@
-# EcoFlow MQTT to Prometheus
+# EcoFlow MQTT to Prometheus exporter
 
 ## About
 
