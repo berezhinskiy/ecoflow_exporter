@@ -93,7 +93,7 @@ class Worker:
                 self.metrics.append(metric)
             metric.set(ecoflow_object_value)
             # Set AC current to zero in case of zero voltage
-            if ecoflow_object_key == 'inv.acInVol':
+            if ecoflow_object_key == 'inv.acInVol' and ecoflow_object_value == 0:
                 ac_voltage = self.get_metric_by_ecoflow_object_key('inv.acInAmp')
                 if ac_voltage:
                     ac_voltage.set(0)
