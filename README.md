@@ -4,7 +4,7 @@
 
 An implementation of a Prometheus exporter for [EcoFlow](https://www.ecoflow.com/) products. To receive information from the device, exporter works the same way as the official mobile application by subscribing to EcoFlow MQTT Broker `mqtt.ecoflow.com`
 
-Unlike `REST API` exporters, it is not required to request for `APP_KEY` and `SECRET_KEY` since MQTT credentials can be extracted from `api.ecoflow.com` (see [Usage](#usage) section). Another benefit of such implementation is that it provides much more device information:
+Unlike REST API exporters, it is not required to request for `APP_KEY` and `SECRET_KEY` since MQTT credentials can be extracted from `api.ecoflow.com` (see [Usage](#usage) section). Another benefit of such implementation is that it provides much more device information:
 
 [![Dashboard](images/EcoflowMQTT.png?raw=true)](https://grafana.com/grafana/dashboards/17812-ecoflow-mqtt/)
 
@@ -43,7 +43,7 @@ All metrics are prefixed with `ecoflow` and reports label `device_sn` for multip
 
 ⚠️ This project is in no way connected to EcoFlow company, and is entirely developed as a fun project with no guarantees of anything.
 
-⚠️ Unexpectedly, some values are always zero (like `ecoflow_bms_ems_status_fan_level` and `ecoflow_inv_fan_state`). It is not a bug in the exporter. No need to create an issue. The exporter just converts the MQTT payload to Prometheus format. It implements small hacks like [here](ecoflow_mqtt_prometheus_exporter.py#L99-L103), but in general, values is provided by the device as it is. To dive into received payloads, enable `DEBUG` logging.
+⚠️ Unexpectedly, some values are always zero (like `ecoflow_bms_ems_status_fan_level` and `ecoflow_inv_fan_state`). It is not a bug in the exporter. No need to create an issue. The exporter just converts the MQTT payload to Prometheus format. It implements small hacks like [here](ecoflow_mqtt_prometheus_exporter.py#L103-L107), but in general, values is provided by the device as it is. To dive into received payloads, enable `DEBUG` logging.
 
 ⚠️ This has only been tested with __DELTA 2__ Please, create an issue to let me know if exporter works well (or not) with your model.
 
@@ -77,7 +77,7 @@ Ecoflow password:
 }
 ```
 
-- The program is parameterized via environment variables:
+- Exporter is parameterized via environment variables:
 
 Required:
 
@@ -97,23 +97,23 @@ Optional:
 
 `LOG_LEVEL` - (default: `INFO`) Possible values: `DEBUG`, `INFO`, `WARNING`, `ERROR`
 
-Example of running docker image:
+- Example of running docker image:
 
 ```bash
 docker run -e DEVICE_SN=<your device SN> -e MQTT_USERNAME=<your MQTT username> -e MQTT_PASSWORD=<your MQTT password> -it -p 9090:9090 --network=host berezhinskiy/ecoflow-mqtt-prometheus-exporter
 ```
 
-will run the image with the exporter on *:9090
+will run the image with the exporter on `*:9090`
 
-## Exported metrics
+## Metrics
 
-Exporter internal metrics:
+Prepared by exporter itself:
 
 - `ecoflow_online`
 - `ecoflow_mqtt_messages_receive_total`
 - `ecoflow_mqtt_messages_receive_created`
 
-Current list of payload metrics:
+Actual list of payload metrics:
 
 - `ecoflow_pd_input_watts`
 - `ecoflow_pd_usb1_watts`

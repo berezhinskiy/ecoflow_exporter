@@ -42,11 +42,12 @@ class Worker:
         self.message_queue = message_queue
         self.device_sn = device_sn
         self.collecting_interval_seconds = collecting_interval_seconds
-        self.metrics = []
-        self.online = Gauge("online", "1 if device is online", labelnames=["device_sn"], namespace="ecoflow")
-        self.mqtt_messages_receive_total = Counter("mqtt_messages_receive_total", "total MQTT messages", labelnames=["device_sn"], namespace="ecoflow")
+        self.metrics_collector = []
+        self.online = Gauge("ecoflow_online", "1 if device is online", labelnames=["device_sn"])
+        self.mqtt_messages_receive_total = Counter("ecoflow_mqtt_messages_receive_total", "total MQTT messages", labelnames=["device_sn"])
 
     def run_metrics_loop(self):
+        time.sleep(self.collecting_interval_seconds)
         while True:
             queue_size = self.message_queue.qsize()
             if queue_size > 0:
@@ -57,32 +58,35 @@ class Worker:
                 log.info("Message queue is empty. Assuming that the device is offline")
                 self.online.labels(device_sn=self.device_sn).set(0)
                 # Clear metrics for NaN (No data) instead of last value
-                for metric in self.metrics:
+                for metric in self.metrics_collector:
                     metric.clear()
 
             while not self.message_queue.empty():
-                message = self.message_queue.get()
-                if message is None:
+                payload = self.message_queue.get()
+                log.debug(f"Recived payload: {payload}")
+                if payload is None:
                     continue
 
                 try:
-                    message = json.loads(message)
-                    params = message['params']
-                except Exception:
-                    log.error(f"Cannot parse MQTT message: {message}")
+                    payload = json.loads(payload)
+                    params = payload['params']
+                except Exception as error:
+                    log.error(f"Failed to parse MQTT payload: {payload} Error: {error}")
                     continue
-                log.debug(f"Processing payload: {params}")
                 self.process_payload(params)
 
             time.sleep(self.collecting_interval_seconds)
 
     def get_metric_by_ecoflow_payload_key(self, ecoflow_payload_key):
-        for metric in self.metrics:
+        for metric in self.metrics_collector:
             if metric.ecoflow_payload_key == ecoflow_payload_key:
+                log.debug(f"Found metric {metric.name} linked to {ecoflow_payload_key}")
                 return metric
+        log.debug(f"Cannot find metric linked to {ecoflow_payload_key}")
         return False
 
     def process_payload(self, params):
+        log.debug(f"Processing params: {params}")
         for ecoflow_payload_key in params.keys():
             ecoflow_payload_value = params[ecoflow_payload_key]
             if isinstance(ecoflow_payload_value, list):
@@ -93,14 +97,14 @@ class Worker:
             if not metric:
                 metric = EcoflowMetric(ecoflow_payload_key, self.device_sn)
                 log.info(f"Created new metric from payload key {metric.ecoflow_payload_key} -> {metric.name}")
-                self.metrics.append(metric)
+                self.metrics_collector.append(metric)
             metric.set(ecoflow_payload_value)
 
-            # Set AC current to zero in case of zero voltage
             if ecoflow_payload_key == 'inv.acInVol' and ecoflow_payload_value == 0:
-                ac_voltage = self.get_metric_by_ecoflow_payload_key('inv.acInAmp')
-                if ac_voltage:
-                    ac_voltage.set(0)
+                ac_in_current = self.get_metric_by_ecoflow_payload_key('inv.acInAmp')
+                if ac_in_current:
+                    log.debug("Set AC inverter input current to zero because of zero inverter voltage")
+                    ac_in_current.set(0)
 
 
 class EcoflowMQTT():
@@ -158,7 +162,7 @@ class EcoflowMQTT():
 
 
 def main():
-    log_level = str(os.getenv("LOG_LEVEL", "INFO"))
+    log_level = os.getenv("LOG_LEVEL", "INFO")
 
     match log_level:
         case "DEBUG":
