@@ -70,7 +70,8 @@ class Worker:
                 except Exception:
                     log.error(f"Cannot parse MQTT message: {message}")
                     continue
-                self.process_message(params)
+                log.debug(f"Processing payload: {params}")
+                self.process_payload(params)
 
             time.sleep(self.collecting_interval_seconds)
 
@@ -80,7 +81,7 @@ class Worker:
                 return metric
         return False
 
-    def process_message(self, params):
+    def process_payload(self, params):
         for ecoflow_object_key in params.keys():
             ecoflow_object_value = params[ecoflow_object_key]
             if isinstance(ecoflow_object_value, list):
