@@ -1,4 +1,4 @@
-name: ci
+name: Docker
 
 on:
   push:
@@ -11,9 +11,9 @@ on:
       - master
 
 jobs:
-  build_docker:
+  docker:
     runs-on: ubuntu-latest
-    name: Build and push ecoflow-mqtt-prometheus-exporter docker
+    name: Build and push image
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -23,11 +23,12 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: docker.io/berezhinskiy/ecoflow-mqtt-prometheus-exporter
-          flavor: latest=true
           tags: |
             type=ref,event=branch
             type=ref,event=pr
             type=semver,pattern={{version}}
+            # set latest tag for master branch
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'master') }}
 
       - name: Login to Docker Hub
         if: github.event_name != 'pull_request'
