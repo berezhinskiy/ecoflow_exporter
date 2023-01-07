@@ -11,16 +11,16 @@ from prometheus_client import start_http_server, Gauge, Counter
 
 
 class EcoflowMetric:
-    def __init__(self, ecoflow_object_key, device_sn):
-        self.ecoflow_object_key = ecoflow_object_key
+    def __init__(self, ecoflow_payload_key, device_sn):
+        self.ecoflow_payload_key = ecoflow_payload_key
         self.device_sn = device_sn
         self.name = f"ecoflow_{self.convert_ecoflow_key_to_prometheus_name()}"
-        self.metric = Gauge(self.name, f"value from MQTT object key {ecoflow_object_key}", labelnames=["device_sn"])
+        self.metric = Gauge(self.name, f"value from MQTT object key {ecoflow_payload_key}", labelnames=["device_sn"])
 
     def convert_ecoflow_key_to_prometheus_name(self):
         # bms_bmsStatus.maxCellTemp -> bms_bms_status_max_cell_temp
         # pd.ext4p8Port -> pd_ext4p8_port
-        key = self.ecoflow_object_key.replace('.', '_')
+        key = self.ecoflow_payload_key.replace('.', '_')
         new = key[0].lower()
         for character in key[1:]:
             if character.isupper() and not new[-1] == '_':
@@ -48,14 +48,15 @@ class Worker:
 
     def run_metrics_loop(self):
         while True:
-            if self.message_queue.qsize() > 0:
-                log.info(f"Processing {self.message_queue.qsize()} event(s) from the message queue")
+            queue_size = self.message_queue.qsize()
+            if queue_size > 0:
+                log.info(f"Processing {queue_size} event(s) from the message queue")
                 self.online.labels(device_sn=self.device_sn).set(1)
-                self.mqtt_messages_receive_total.labels(device_sn=self.device_sn).inc(self.message_queue.qsize())
+                self.mqtt_messages_receive_total.labels(device_sn=self.device_sn).inc(queue_size)
             else:
-                log.info("Message queue is empty. Probably, the device is offline")
+                log.info("Message queue is empty. Assuming that the device is offline")
                 self.online.labels(device_sn=self.device_sn).set(0)
-                # Clear metrics for NaN instead of last value
+                # Clear metrics for NaN (No data) instead of last value
                 for metric in self.metrics:
                     metric.clear()
 
@@ -75,27 +76,29 @@ class Worker:
 
             time.sleep(self.collecting_interval_seconds)
 
-    def get_metric_by_ecoflow_object_key(self, ecoflow_object_key):
+    def get_metric_by_ecoflow_payload_key(self, ecoflow_payload_key):
         for metric in self.metrics:
-            if metric.ecoflow_object_key == ecoflow_object_key:
+            if metric.ecoflow_payload_key == ecoflow_payload_key:
                 return metric
         return False
 
     def process_payload(self, params):
-        for ecoflow_object_key in params.keys():
-            ecoflow_object_value = params[ecoflow_object_key]
-            if isinstance(ecoflow_object_value, list):
-                log.warning(f"Skipping not supported metric {ecoflow_object_key}: {ecoflow_object_value}")
+        for ecoflow_payload_key in params.keys():
+            ecoflow_payload_value = params[ecoflow_payload_key]
+            if isinstance(ecoflow_payload_value, list):
+                log.warning(f"Skipping unsupported metric {ecoflow_payload_key}: {ecoflow_payload_value}")
                 continue
-            metric = self.get_metric_by_ecoflow_object_key(ecoflow_object_key)
+
+            metric = self.get_metric_by_ecoflow_payload_key(ecoflow_payload_key)
             if not metric:
-                metric = EcoflowMetric(ecoflow_object_key, self.device_sn)
-                log.info(f"Created new metric from object key {metric.ecoflow_object_key} -> {metric.name}")
+                metric = EcoflowMetric(ecoflow_payload_key, self.device_sn)
+                log.info(f"Created new metric from payload key {metric.ecoflow_payload_key} -> {metric.name}")
                 self.metrics.append(metric)
-            metric.set(ecoflow_object_value)
+            metric.set(ecoflow_payload_value)
+
             # Set AC current to zero in case of zero voltage
-            if ecoflow_object_key == 'inv.acInVol' and ecoflow_object_value == 0:
-                ac_voltage = self.get_metric_by_ecoflow_object_key('inv.acInAmp')
+            if ecoflow_payload_key == 'inv.acInVol' and ecoflow_payload_value == 0:
+                ac_voltage = self.get_metric_by_ecoflow_payload_key('inv.acInAmp')
                 if ac_voltage:
                     ac_voltage.set(0)
 
@@ -118,29 +121,32 @@ class EcoflowMQTT():
         self.client.on_connect = self.on_connect
         self.client.on_disconnect = self.on_disconnect
         self.client.on_message = self.on_message
+
         log.info(f"Connecting to EcoFlow MQTT Broker {self.broker_addr}:{self.broker_port}")
         self.client.connect(self.broker_addr, self.broker_port)
         self.client.loop_start()
 
     def on_connect(self, client, userdata, flags, rc):
-        if rc == 0:
-            log.info(f"Successfully connected to MQTT")
-            self.client.subscribe(self.topic)
-            log.debug(f"Subscribed to topic {self.topic}")
-        elif rc == -1:
-            log.error("Failed to connect to MQTT: connection timed out")
-        elif rc == 1:
-            log.error("Failed to connect to MQTT: incorrect protocol version")
-        elif rc == 2:
-            log.error("Failed to connect to MQTT: invalid client identifier")
-        elif rc == 3:
-            log.error("Failed to connect to MQTT: server unavailable")
-        elif rc == 4:
-            log.error("Failed to connect to MQTT: bad username or password")
-        elif rc == 5:
-            log.error("Failed to connect to MQTT: not authorised")
-        else:
-            log.error(f"Failed to connect to MQTT: another error occured: {rc}")
+        match rc:
+            case 0:
+                log.info(f"Successfully connected to MQTT")
+                self.client.subscribe(self.topic)
+                log.debug(f"Subscribed to topic {self.topic}")
+            case -1:
+                log.error("Failed to connect to MQTT: connection timed out")
+            case 1:
+                log.error("Failed to connect to MQTT: incorrect protocol version")
+            case 2:
+                log.error("Failed to connect to MQTT: invalid client identifier")
+            case 3:
+                log.error("Failed to connect to MQTT: server unavailable")
+            case 4:
+                log.error("Failed to connect to MQTT: bad username or password")
+            case 5:
+                log.error("Failed to connect to MQTT: not authorised")
+            case _:
+                log.error(f"Failed to connect to MQTT: another error occured: {rc}")
+
         return client
 
     def on_disconnect(self, client, userdata, rc):
@@ -153,6 +159,7 @@ class EcoflowMQTT():
 
 def main():
     log_level = str(os.getenv("LOG_LEVEL", "INFO"))
+
     match log_level:
         case "DEBUG":
             log_level = log.DEBUG
@@ -167,12 +174,16 @@ def main():
 
     log.basicConfig(stream=sys.stdout, level=log_level, format='%(asctime)s %(levelname)-7s %(message)s')
 
-    device_sn = str(os.getenv("DEVICE_SN"))
-    username = str(os.getenv("MQTT_USERNAME"))
-    password = str(os.getenv("MQTT_PASSWORD"))
-    broker_addr = str(os.getenv("MQTT_BROKER", "mqtt.ecoflow.com"))
+    device_sn = os.getenv("DEVICE_SN")
+    username = os.getenv("MQTT_USERNAME")
+    password = os.getenv("MQTT_PASSWORD")
+    broker_addr = os.getenv("MQTT_BROKER", "mqtt.ecoflow.com")
     broker_port = int(os.getenv("MQTT_PORT", "8883"))
     exporter_port = int(os.getenv("EXPORTER_PORT", "9090"))
+
+    if (not device_sn or not username or not password):
+        log.error("Please, provide all required environment variables: DEVICE_SN, MQTT_USERNAME, MQTT_PASSWORD")
+        sys.exit(1)
 
     message_queue = Queue()
 

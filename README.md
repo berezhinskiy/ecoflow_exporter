@@ -1,10 +1,10 @@
-# EcoFlow MQTT to Prometheus exporter
+# ⚡ EcoFlow MQTT to Prometheus exporter
 
 ## About
 
-An implementation of a prometheus exporter for [EcoFlow](https://www.ecoflow.com/) products that support the MQTT backend
+An implementation of a Prometheus exporter for [EcoFlow](https://www.ecoflow.com/) products. To receive information from the device, exporter works the same way as the official mobile application by subscribing to EcoFlow MQTT Broker `mqtt.ecoflow.com`
 
-It is not required to request REST `APP_KEY` and `SECRET_KEY` since MQTT credentials can be extracted from `api.ecoflow.com` (see [Usage](#usage) section)
+Unlike `REST API` exporters, it is not required to request for `APP_KEY` and `SECRET_KEY` since MQTT credentials can be extracted from `api.ecoflow.com` (see [Usage](#usage) section). Another benefit of such implementation is that it provides much more device information:
 
 [![Dashboard](images/EcoflowMQTT.png?raw=true)](https://grafana.com/grafana/dashboards/17812-ecoflow-mqtt/)
 
@@ -15,7 +15,7 @@ The project provides:
 - [Dashboard for Grafana](https://grafana.com/grafana/dashboards/17812-ecoflow-mqtt/)
 - [Docker image](https://hub.docker.com/repository/docker/berezhinskiy/ecoflow-mqtt-prometheus-exporter) for your convenience
 
-Exporter will collect all metrics names and it's values sent by the device to MQTT EcoFlow Broker. In case of any new objects in the queue, metrics will be generated automatically based on the JSON object key/value. For example, object:
+Exporter collects all metrics names and their values sent by the device to MQTT EcoFlow Broker. In case of any new objects in the queue, metrics will be generated automatically based on the JSON object key/value. For example, payload:
 
 ```json
 {
@@ -37,15 +37,15 @@ ecoflow_inv_ac_in_vol{device_sn="XXXXXXXXXXXXXXXX"} 242182.0
 ecoflow_inv_inv_out_vol{device_sn="XXXXXXXXXXXXXXXX"} 244582.0
 ```
 
-All metrics produced are prefixed with `ecoflow` and reports label `device_sn` for multiple device support
+All metrics are prefixed with `ecoflow` and reports label `device_sn` for multiple device support.
 
 ## Disclaimers
 
-__Disclaimer 1__: This project is in no way connected to EcoFlow the company, and is entirely developed as a fun project with no guarantees of anything
+⚠️ This project is in no way connected to EcoFlow company, and is entirely developed as a fun project with no guarantees of anything.
 
-__Disclaimer 2__: Unexpectedly, some values are always zero (like `ecoflow_bms_ems_status_fan_level` and `ecoflow_inv_fan_state`). It is not a bug in the exporter. No need to create an issue. The exporter just converts the MQTT payload to Prometheus format. It implements small hacks like [here](ecoflow_mqtt_prometheus_exporter.py#L95-L99), but in general, values is provided by the device as is. To dive into received payloads, enable `DEBUG` logging.
+⚠️ Unexpectedly, some values are always zero (like `ecoflow_bms_ems_status_fan_level` and `ecoflow_inv_fan_state`). It is not a bug in the exporter. No need to create an issue. The exporter just converts the MQTT payload to Prometheus format. It implements small hacks like [here](ecoflow_mqtt_prometheus_exporter.py#L99-L103), but in general, values is provided by the device as it is. To dive into received payloads, enable `DEBUG` logging.
 
-__Disclaimer 3__: This has only been tested with __DELTA 2__
+⚠️ This has only been tested with __DELTA 2__ Please, create an issue to let me know if exporter works well (or not) with your model.
 
 ## Usage
 
@@ -99,17 +99,22 @@ Optional:
 
 Example of running docker image:
 
-`docker run -e DEVICE_SN=<your device SN> -e MQTT_USERNAME=<your MQTT username> -e MQTT_PASSWORD=<your MQTT password> -it -p 9090:9090 --network=host berezhinskiy/ecoflow-mqtt-prometheus-exporter`
+```bash
+docker run -e DEVICE_SN=<your device SN> -e MQTT_USERNAME=<your MQTT username> -e MQTT_PASSWORD=<your MQTT password> -it -p 9090:9090 --network=host berezhinskiy/ecoflow-mqtt-prometheus-exporter
+```
 
 will run the image with the exporter on *:9090
 
 ## Exported metrics
 
-The current list of exported metrics is following:
+Exporter internal metrics:
 
 - `ecoflow_online`
 - `ecoflow_mqtt_messages_receive_total`
 - `ecoflow_mqtt_messages_receive_created`
+
+Current list of payload metrics:
+
 - `ecoflow_pd_input_watts`
 - `ecoflow_pd_usb1_watts`
 - `ecoflow_pd_watts_in_sum`
