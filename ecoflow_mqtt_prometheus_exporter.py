@@ -5,9 +5,14 @@ import random
 import ssl
 import time
 import json
+import re
 import paho.mqtt.client as mqtt
 from queue import Queue
 from prometheus_client import start_http_server, Gauge, Counter
+
+
+class EcoflowMetricException(Exception):
+    pass
 
 
 class EcoflowMetric:
@@ -26,6 +31,10 @@ class EcoflowMetric:
             if character.isupper() and not new[-1] == '_':
                 new += '_'
             new += character.lower()
+        # Check that metric name complies with the data model for valid characters
+        # https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
+        if not re.match("[a-zA-Z_:][a-zA-Z0-9_:]*", new):
+            raise EcoflowMetricException(f"Cannot convert payload key {self.ecoflow_payload_key} to comply with the Prometheus data model. Please, raise an issue!")
         return new
 
     def set(self, value):
@@ -95,7 +104,11 @@ class Worker:
 
             metric = self.get_metric_by_ecoflow_payload_key(ecoflow_payload_key)
             if not metric:
-                metric = EcoflowMetric(ecoflow_payload_key, self.device_sn)
+                try:
+                    metric = EcoflowMetric(ecoflow_payload_key, self.device_sn)
+                except EcoflowMetricException as error:
+                    log.error(error)
+                    continue
                 log.info(f"Created new metric from payload key {metric.ecoflow_payload_key} -> {metric.name}")
                 self.metrics_collector.append(metric)
             metric.set(ecoflow_payload_value)
@@ -155,7 +168,7 @@ class EcoflowMQTT():
 
     def on_disconnect(self, client, userdata, rc):
         if rc != 0:
-            log.warning(f"Unexpected MQTT disconnection: {rc}. Will auto-reconnect")
+            log.error(f"Unexpected MQTT disconnection: {rc}. Will auto-reconnect")
 
     def on_message(self, client, userdata, message):
         self.message_queue.put(message.payload.decode("utf-8"))
