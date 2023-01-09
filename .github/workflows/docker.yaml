@@ -54,18 +54,10 @@ jobs:
         with:
           version: "pr-${{github.event.pull_request.number}}"
 
-      # - name: Delete PR package after merge
-      #   # if: ${{ github.event_name == 'push' || github.event.pull_request.merged == true }}
-      #   uses: actions/delete-package-versions@v4
-      #   with:
-      #     package-version-ids: "${{ steps.version.outputs.ids }}"
-      #     package-name: 'ecoflow_exporter'
-      #     package-type: 'container'
-
-      - name: Delete Release
-        uses: WyriHaximus/github-action-delete-package@master
-        if: ${{ steps.version.outputs.ids }} != ''
+      - name: Delete PR package after merge
+        # if: ${{ github.event_name == 'push' || github.event.pull_request.merged == true }}
+        uses: actions/delete-package-versions@ba4d22f25141387e5ab82cfec079de6d2df96815
         with:
-          packageVersionId: ${{ steps.release.outputs.ids }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          package-version-ids: "${{ steps.version.outputs.ids }}"
+          package-name: 'ecoflow_exporter'
+          package-type: 'container'
