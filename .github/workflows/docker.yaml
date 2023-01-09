@@ -46,7 +46,7 @@ jobs:
           user: ${{ github.repository_owner }}
           names: |
             ecoflow_exporter
-          version-pattern: "^pr-${{github.event.pull_request.number}}$"
+          version-pattern: "pr-${{github.event.pull_request.number}}"
 
       - name: Build and push
         uses: docker/build-push-action@v3
