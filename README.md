@@ -105,7 +105,7 @@ Optional:
 - Example of running docker image:
 
 ```bash
-docker run -e DEVICE_SN=<your device SN> -e MQTT_USERNAME=<your MQTT username> -e MQTT_PASSWORD=<your MQTT password> -it -p 9090:9090 --network=host berezhinskiy/ecoflow-mqtt-prometheus-exporter
+docker run -e DEVICE_SN=<your device SN> -e MQTT_USERNAME=<your MQTT username> -e MQTT_PASSWORD=<your MQTT password> -it -p 9090:9090 --network=host ghcr.io/berezhinskiy/ecoflow_exporter
 ```
 
 will run the image with the exporter on `*:9090`
