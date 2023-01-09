@@ -34,6 +34,7 @@ jobs:
             type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'master') }}
 
       - name: Log in to registry
+        if: ${{ github.event_name != 'pull_request' }}
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
 
       - name: Set up Docker Buildx
@@ -44,16 +45,16 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          push: true
+          push: ${{ github.event_name != 'pull_request' }}
           tags: "${{ steps.meta.outputs.tags }}"
 
-      - name: Delete package after PR merge
-        if: ${{ github.event_name == 'push' || github.event.pull_request.merged == true }}
-        uses: smartsquaregmbh/delete-old-packages@v0.6.0
-        with:
-          type: container
-          user: ${{ github.repository_owner }}
-          keep: 0
-          names: |
-            ecoflow_exporter
-          version-pattern: "^pr\\-${{github.event.pull_request.number}}$"
+      # - name: Delete package after PR merge
+      #   if: ${{ github.event_name == 'push' || github.event.pull_request.merged == true }}
+      #   uses: smartsquaregmbh/delete-old-packages@v0.6.0
+      #   with:
+      #     type: container
+      #     user: ${{ github.repository_owner }}
+      #     keep: 0
+      #     names: |
+      #       ecoflow_exporter
+      #     version-pattern: "^pr\\-${{github.event.pull_request.number}}$"
