@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - master
+    paths-ignore:
+      - README.md
+      - CHANGELOG.md
+      - .gitignore
     tags:
       - 'v*'
   pull_request:
@@ -42,3 +46,12 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
+
+      - name: Delete PR package after merge
+        # if: ${{ github.event_name == 'push' || github.event.pull_request.merged == true }}
+        uses: actions/delete-package-versions@v4
+        with:
+          package-version-ids: pr-${{github.event.pull_request.number}}
+          package-name: ecoflow_exporter
+          package-type: container
+          token: ${{ secrets.GITHUB_TOKEN }}
