@@ -39,6 +39,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
+      - name: Create annotation for build error
+        run: echo "PR number - ${{github.event.pull_request.number}}"
+
       - name: Delete PR package after merge
         uses: smartsquaregmbh/delete-old-packages@v0.6.0
         with:
