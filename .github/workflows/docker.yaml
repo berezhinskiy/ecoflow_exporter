@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - master
+    paths-ignore:
+      - README.md
+      - CHANGELOG.md
+      - .gitignore
     tags:
       - 'v*'
   pull_request:
@@ -21,7 +25,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4
         with:
-          images: docker.io/berezhinskiy/ecoflow-mqtt-prometheus-exporter
+          images: ghcr.io/${{ github.repository_owner }}/ecoflow_exporter
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -29,11 +33,8 @@ jobs:
             # set latest tag for master branch
             type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'master') }}
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Log in to registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -44,4 +45,15 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: "${{ steps.meta.outputs.tags }}"
+
+      - name: Delete package after PR merge
+        if: ${{ github.event_name == 'push' || github.event.pull_request.merged == true }}
+        uses: smartsquaregmbh/delete-old-packages@v0.6.0
+        with:
+          type: container
+          user: ${{ github.repository_owner }}
+          keep: 0
+          names: |
+            ecoflow_exporter
+          version-pattern: "^pr\\-${{github.event.pull_request.number}}$"
