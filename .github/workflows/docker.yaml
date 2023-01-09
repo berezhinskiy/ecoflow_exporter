@@ -47,17 +47,25 @@ jobs:
           push: true
           tags: "${{ steps.meta.outputs.tags }}"
 
-      - name: Get package version id
-        uses: castlabs/get-package-version-id-action@v2.0
-        # if: ${{ github.event_name == 'push' || github.event.pull_request.merged == true }}
-        id: version
-        with:
-          version: "pr-${{github.event.pull_request.number}}"
+      # - name: Get package version id
+      #   uses: castlabs/get-package-version-id-action@v2.0
+      #   # if: ${{ github.event_name == 'push' || github.event.pull_request.merged == true }}
+      #   id: version
+      #   with:
+      #     version: "pr-${{github.event.pull_request.number}}"
+
+      # - name: Delete PR package after merge
+      #   # if: ${{ github.event_name == 'push' || github.event.pull_request.merged == true }}
+      #   uses: actions/delete-package-versions@ba4d22f25141387e5ab82cfec079de6d2df96815
+      #   with:
+      #     package-version-ids: "${{ steps.version.outputs.ids }}"
+      #     package-name: 'ecoflow_exporter'
+      #     package-type: 'container'
 
       - name: Delete PR package after merge
-        # if: ${{ github.event_name == 'push' || github.event.pull_request.merged == true }}
-        uses: actions/delete-package-versions@ba4d22f25141387e5ab82cfec079de6d2df96815
+        uses: smartsquaregmbh/delete-old-packages@v0.6.0
         with:
-          package-version-ids: "${{ steps.version.outputs.ids }}"
-          package-name: 'ecoflow_exporter'
-          package-type: 'container'
+          type: container
+          names: |
+            ecoflow_exporter
+          version-pattern: "^pr-${{github.event.pull_request.number}}$"
