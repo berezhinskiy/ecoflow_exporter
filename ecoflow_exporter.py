@@ -38,6 +38,9 @@ class EcoflowMetric:
         return new
 
     def set(self, value):
+        # According to best practices for naming metrics and labels, the voltage should be in volts and the current in amperes
+        # WARNING! This will ruin all Prometheus historical data and backward compatibility of Grafana dashboard
+        # value = value / 1000 if value.endswith("_vol") or value.endswith("_amp") else value
         log.debug(f"Set {self.name} = {value}")
         self.metric.labels(device=self.device_name).set(value)
 
@@ -111,6 +114,7 @@ class Worker:
                     continue
                 log.info(f"Created new metric from payload key {metric.ecoflow_payload_key} -> {metric.name}")
                 self.metrics_collector.append(metric)
+
             metric.set(ecoflow_payload_value)
 
             if ecoflow_payload_key == 'inv.acInVol' and ecoflow_payload_value == 0:
@@ -169,6 +173,7 @@ class EcoflowMQTT():
     def on_disconnect(self, client, userdata, rc):
         if rc != 0:
             log.error(f"Unexpected MQTT disconnection: {rc}. Will auto-reconnect")
+            time.sleep(5)
 
     def on_message(self, client, userdata, message):
         self.message_queue.put(message.payload.decode("utf-8"))
