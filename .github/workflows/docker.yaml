@@ -64,7 +64,7 @@ jobs:
 
       - name: Delete Release
         uses: WyriHaximus/github-action-delete-package@master
-        if: steps.version.outputs.ids != ''
+        if: ${{ steps.version.outputs.ids }} != ''
         with:
           packageVersionId: ${{ steps.release.outputs.ids }}
         env:
