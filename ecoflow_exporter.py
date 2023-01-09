@@ -16,11 +16,11 @@ class EcoflowMetricException(Exception):
 
 
 class EcoflowMetric:
-    def __init__(self, ecoflow_payload_key, device_sn):
+    def __init__(self, ecoflow_payload_key, device_name):
         self.ecoflow_payload_key = ecoflow_payload_key
-        self.device_sn = device_sn
+        self.device_name = device_name
         self.name = f"ecoflow_{self.convert_ecoflow_key_to_prometheus_name()}"
-        self.metric = Gauge(self.name, f"value from MQTT object key {ecoflow_payload_key}", labelnames=["device_sn"])
+        self.metric = Gauge(self.name, f"value from MQTT object key {ecoflow_payload_key}", labelnames=["device"])
 
     def convert_ecoflow_key_to_prometheus_name(self):
         # bms_bmsStatus.maxCellTemp -> bms_bms_status_max_cell_temp
@@ -38,8 +38,11 @@ class EcoflowMetric:
         return new
 
     def set(self, value):
+        # According to best practices for naming metrics and labels, the voltage should be in volts and the current in amperes
+        # WARNING! This will ruin all Prometheus historical data and backward compatibility of Grafana dashboard
+        # value = value / 1000 if value.endswith("_vol") or value.endswith("_amp") else value
         log.debug(f"Set {self.name} = {value}")
-        self.metric.labels(device_sn=self.device_sn).set(value)
+        self.metric.labels(device=self.device_name).set(value)
 
     def clear(self):
         log.debug(f"Clear {self.name}")
@@ -47,13 +50,13 @@ class EcoflowMetric:
 
 
 class Worker:
-    def __init__(self, message_queue, device_sn, collecting_interval_seconds=5):
+    def __init__(self, message_queue, device_name, collecting_interval_seconds=5):
         self.message_queue = message_queue
-        self.device_sn = device_sn
+        self.device_name = device_name
         self.collecting_interval_seconds = collecting_interval_seconds
         self.metrics_collector = []
-        self.online = Gauge("ecoflow_online", "1 if device is online", labelnames=["device_sn"])
-        self.mqtt_messages_receive_total = Counter("ecoflow_mqtt_messages_receive_total", "total MQTT messages", labelnames=["device_sn"])
+        self.online = Gauge("ecoflow_online", "1 if device is online", labelnames=["device"])
+        self.mqtt_messages_receive_total = Counter("ecoflow_mqtt_messages_receive_total", "total MQTT messages", labelnames=["device"])
 
     def run_metrics_loop(self):
         time.sleep(self.collecting_interval_seconds)
@@ -61,11 +64,11 @@ class Worker:
             queue_size = self.message_queue.qsize()
             if queue_size > 0:
                 log.info(f"Processing {queue_size} event(s) from the message queue")
-                self.online.labels(device_sn=self.device_sn).set(1)
-                self.mqtt_messages_receive_total.labels(device_sn=self.device_sn).inc(queue_size)
+                self.online.labels(device=self.device_name).set(1)
+                self.mqtt_messages_receive_total.labels(device=self.device_name).inc(queue_size)
             else:
                 log.info("Message queue is empty. Assuming that the device is offline")
-                self.online.labels(device_sn=self.device_sn).set(0)
+                self.online.labels(device=self.device_name).set(0)
                 # Clear metrics for NaN (No data) instead of last value
                 for metric in self.metrics_collector:
                     metric.clear()
@@ -105,12 +108,13 @@ class Worker:
             metric = self.get_metric_by_ecoflow_payload_key(ecoflow_payload_key)
             if not metric:
                 try:
-                    metric = EcoflowMetric(ecoflow_payload_key, self.device_sn)
+                    metric = EcoflowMetric(ecoflow_payload_key, self.device_name)
                 except EcoflowMetricException as error:
                     log.error(error)
                     continue
                 log.info(f"Created new metric from payload key {metric.ecoflow_payload_key} -> {metric.name}")
                 self.metrics_collector.append(metric)
+
             metric.set(ecoflow_payload_value)
 
             if ecoflow_payload_key == 'inv.acInVol' and ecoflow_payload_value == 0:
@@ -169,6 +173,7 @@ class EcoflowMQTT():
     def on_disconnect(self, client, userdata, rc):
         if rc != 0:
             log.error(f"Unexpected MQTT disconnection: {rc}. Will auto-reconnect")
+            time.sleep(5)
 
     def on_message(self, client, userdata, message):
         self.message_queue.put(message.payload.decode("utf-8"))
@@ -192,22 +197,23 @@ def main():
     log.basicConfig(stream=sys.stdout, level=log_level, format='%(asctime)s %(levelname)-7s %(message)s')
 
     device_sn = os.getenv("DEVICE_SN")
-    username = os.getenv("MQTT_USERNAME")
-    password = os.getenv("MQTT_PASSWORD")
+    device_name = os.getenv("DEVICE_NAME") or device_sn
+    mqtt_username = os.getenv("MQTT_USERNAME")
+    mqtt_password = os.getenv("MQTT_PASSWORD")
     broker_addr = os.getenv("MQTT_BROKER", "mqtt.ecoflow.com")
     broker_port = int(os.getenv("MQTT_PORT", "8883"))
     exporter_port = int(os.getenv("EXPORTER_PORT", "9090"))
 
-    if (not device_sn or not username or not password):
+    if (not device_sn or not mqtt_username or not mqtt_password):
         log.error("Please, provide all required environment variables: DEVICE_SN, MQTT_USERNAME, MQTT_PASSWORD")
         sys.exit(1)
 
     message_queue = Queue()
 
-    ecoflow_mqtt = EcoflowMQTT(message_queue, device_sn, username, password, broker_addr, broker_port)
+    ecoflow_mqtt = EcoflowMQTT(message_queue, device_sn, mqtt_username, mqtt_password, broker_addr, broker_port)
     ecoflow_mqtt.connect()
 
-    metrics = Worker(message_queue, device_sn)
+    metrics = Worker(message_queue, device_name)
     start_http_server(exporter_port)
     metrics.run_metrics_loop()
 

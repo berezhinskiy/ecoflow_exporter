@@ -30,20 +30,20 @@ Exporter collects all metrics names and their values sent by the device to MQTT 
 will generate the following metrics:
 
 ```plain
-ecoflow_bms_bms_status_min_cell_temp{device_sn="XXXXXXXXXXXXXXXX"} 25.0
-ecoflow_bms_bms_status_max_cell_temp{device_sn="XXXXXXXXXXXXXXXX"} 27.0
-ecoflow_bms_ems_status_f32_lcd_show_soc{device_sn="XXXXXXXXXXXXXXXX"} 56.5
-ecoflow_inv_ac_in_vol{device_sn="XXXXXXXXXXXXXXXX"} 242182.0
-ecoflow_inv_inv_out_vol{device_sn="XXXXXXXXXXXXXXXX"} 244582.0
+ecoflow_bms_bms_status_min_cell_temp{device="XXXXXXXXXXXXXXXX"} 25.0
+ecoflow_bms_bms_status_max_cell_temp{device="XXXXXXXXXXXXXXXX"} 27.0
+ecoflow_bms_ems_status_f32_lcd_show_soc{device="XXXXXXXXXXXXXXXX"} 56.5
+ecoflow_inv_ac_in_vol{device="XXXXXXXXXXXXXXXX"} 242182.0
+ecoflow_inv_inv_out_vol{device="XXXXXXXXXXXXXXXX"} 244582.0
 ```
 
-All metrics are prefixed with `ecoflow` and reports label `device_sn` for multiple device support.
+All metrics are prefixed with `ecoflow` and reports label `device` for multiple device support (see [Usage](#usage) section)
 
 ## Disclaimers
 
 ⚠️ This project is in no way connected to EcoFlow company, and is entirely developed as a fun project with no guarantees of anything.
 
-⚠️ Unexpectedly, some values are always zero (like `ecoflow_bms_ems_status_fan_level` and `ecoflow_inv_fan_state`). It is not a bug in the exporter. No need to create an issue. The exporter just converts the MQTT payload to Prometheus format. It implements small hacks like [here](ecoflow_exporter.py#L103-L107), but in general, values is provided by the device as it is. To dive into received payloads, enable `DEBUG` logging.
+⚠️ Unexpectedly, some values are always zero (like `ecoflow_bms_ems_status_fan_level` and `ecoflow_inv_fan_state`). It is not a bug in the exporter. No need to create an issue. The exporter just converts the MQTT payload to Prometheus format. It implements small hacks like [here](ecoflow_exporter.py#L119-L123), but in general, values is provided by the device as it is. To dive into received payloads, enable `DEBUG` logging.
 
 ⚠️ This has only been tested with the following EcoFlow products:
 
@@ -93,6 +93,8 @@ Required:
 `MQTT_PASSWORD` - the password provided by script as `certificatePassword`
 
 Optional:
+
+`DEVICE_NAME` - If given, this name will be exported as `device` label instead of the device serial number
 
 `MQTT_BROKER` - (default: `mqtt.ecoflow.com`)
 
