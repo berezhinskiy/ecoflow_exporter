@@ -6,6 +6,6 @@ RUN /usr/local/bin/python -m pip install --upgrade pip
 ADD requirements.txt /requirements.txt
 RUN pip install -r /requirements.txt
 
-ADD ecoflow_mqtt_prometheus_exporter.py /ecoflow_mqtt_prometheus_exporter.py
+ADD ecoflow_exporter.py /ecoflow_exporter.py
 
-CMD [ "python", "/ecoflow_mqtt_prometheus_exporter.py" ]
+CMD [ "python", "/ecoflow_exporter.py" ]

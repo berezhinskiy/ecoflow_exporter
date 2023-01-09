@@ -1,4 +1,4 @@
-# ⚡ EcoFlow MQTT to Prometheus exporter
+# ⚡ EcoFlow to Prometheus exporter
 
 ## About
 
@@ -13,7 +13,7 @@ The project provides:
 - Bash script to extract EcoFlow MQTT credentials
 - Python program that accepts a number of arguments to collect information about a device and exports the collected metrics to a prometheus endpoint
 - [Dashboard for Grafana](https://grafana.com/grafana/dashboards/17812-ecoflow-mqtt/)
-- [Docker image](https://hub.docker.com/repository/docker/berezhinskiy/ecoflow-mqtt-prometheus-exporter) for your convenience
+- [Docker image](https://github.com/berezhinskiy/ecoflow_exporter/pkgs/container/ecoflow_exporter) for your convenience
 
 Exporter collects all metrics names and their values sent by the device to MQTT EcoFlow Broker. In case of any new objects in the queue, metrics will be generated automatically based on the JSON object key/value. For example, payload:
 
@@ -43,7 +43,7 @@ All metrics are prefixed with `ecoflow` and reports label `device_sn` for multip
 
 ⚠️ This project is in no way connected to EcoFlow company, and is entirely developed as a fun project with no guarantees of anything.
 
-⚠️ Unexpectedly, some values are always zero (like `ecoflow_bms_ems_status_fan_level` and `ecoflow_inv_fan_state`). It is not a bug in the exporter. No need to create an issue. The exporter just converts the MQTT payload to Prometheus format. It implements small hacks like [here](ecoflow_mqtt_prometheus_exporter.py#L103-L107), but in general, values is provided by the device as it is. To dive into received payloads, enable `DEBUG` logging.
+⚠️ Unexpectedly, some values are always zero (like `ecoflow_bms_ems_status_fan_level` and `ecoflow_inv_fan_state`). It is not a bug in the exporter. No need to create an issue. The exporter just converts the MQTT payload to Prometheus format. It implements small hacks like [here](ecoflow_exporter.py#L103-L107), but in general, values is provided by the device as it is. To dive into received payloads, enable `DEBUG` logging.
 
 ⚠️ This has only been tested with the following EcoFlow products:
 
