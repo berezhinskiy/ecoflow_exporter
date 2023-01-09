@@ -30,14 +30,14 @@ Exporter collects all metrics names and their values sent by the device to MQTT 
 will generate the following metrics:
 
 ```plain
-ecoflow_bms_bms_status_min_cell_temp{device_sn="XXXXXXXXXXXXXXXX"} 25.0
-ecoflow_bms_bms_status_max_cell_temp{device_sn="XXXXXXXXXXXXXXXX"} 27.0
-ecoflow_bms_ems_status_f32_lcd_show_soc{device_sn="XXXXXXXXXXXXXXXX"} 56.5
-ecoflow_inv_ac_in_vol{device_sn="XXXXXXXXXXXXXXXX"} 242182.0
-ecoflow_inv_inv_out_vol{device_sn="XXXXXXXXXXXXXXXX"} 244582.0
+ecoflow_bms_bms_status_min_cell_temp{device="XXXXXXXXXXXXXXXX"} 25.0
+ecoflow_bms_bms_status_max_cell_temp{device="XXXXXXXXXXXXXXXX"} 27.0
+ecoflow_bms_ems_status_f32_lcd_show_soc{device="XXXXXXXXXXXXXXXX"} 56.5
+ecoflow_inv_ac_in_vol{device="XXXXXXXXXXXXXXXX"} 242182.0
+ecoflow_inv_inv_out_vol{device="XXXXXXXXXXXXXXXX"} 244582.0
 ```
 
-All metrics are prefixed with `ecoflow` and reports label `device_sn` for multiple device support.
+All metrics are prefixed with `ecoflow` and reports label `device` for multiple device support (see [Usage](#usage) section)
 
 ## Disclaimers
 
@@ -93,6 +93,8 @@ Required:
 `MQTT_PASSWORD` - the password provided by script as `certificatePassword`
 
 Optional:
+
+`DEVICE_NAME` - If given, this name will be exported as `device` label instead of the device serial number
 
 `MQTT_BROKER` - (default: `mqtt.ecoflow.com`)
 
