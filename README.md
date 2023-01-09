@@ -1,4 +1,4 @@
-# ⚡ EcoFlow MQTT to Prometheus exporter
+# ⚡ EcoFlow to Prometheus exporter
 
 ## About
 
@@ -43,7 +43,7 @@ All metrics are prefixed with `ecoflow` and reports label `device_sn` for multip
 
 ⚠️ This project is in no way connected to EcoFlow company, and is entirely developed as a fun project with no guarantees of anything.
 
-⚠️ Unexpectedly, some values are always zero (like `ecoflow_bms_ems_status_fan_level` and `ecoflow_inv_fan_state`). It is not a bug in the exporter. No need to create an issue. The exporter just converts the MQTT payload to Prometheus format. It implements small hacks like [here](ecoflow_mqtt_prometheus_exporter.py#L103-L107), but in general, values is provided by the device as it is. To dive into received payloads, enable `DEBUG` logging.
+⚠️ Unexpectedly, some values are always zero (like `ecoflow_bms_ems_status_fan_level` and `ecoflow_inv_fan_state`). It is not a bug in the exporter. No need to create an issue. The exporter just converts the MQTT payload to Prometheus format. It implements small hacks like [here](ecoflow_exporter.py#L103-L107), but in general, values is provided by the device as it is. To dive into received payloads, enable `DEBUG` logging.
 
 ⚠️ This has only been tested with __DELTA 2__ Please, create an issue to let me know if exporter works well (or not) with your model.
 
