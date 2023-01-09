@@ -9,7 +9,7 @@ on:
       - CHANGELOG.md
       - .gitignore
     tags:
-      - '*'
+      - 'v*'
   pull_request:
     branches:
       - master
@@ -39,16 +39,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Delete PR package after merge
-        uses: smartsquaregmbh/delete-old-packages@v0.6.0
-        with:
-          type: container
-          user: ${{ github.repository_owner }}
-          keep: 0
-          names: |
-            ecoflow_exporter
-          version-pattern: "^pr\\-${{github.event.pull_request.number}}$"
-
       - name: Build and push
         uses: docker/build-push-action@v3
         with:
@@ -57,18 +47,13 @@ jobs:
           push: true
           tags: "${{ steps.meta.outputs.tags }}"
 
-      # - name: Get package version id
-      #   uses: castlabs/get-package-version-id-action@v2.0
-      #   # if: ${{ github.event_name == 'push' || github.event.pull_request.merged == true }}
-      #   id: version
-      #   with:
-      #     version: "pr-${{github.event.pull_request.number}}"
-
-      # - name: Delete PR package after merge
-      #   # if: ${{ github.event_name == 'push' || github.event.pull_request.merged == true }}
-      #   uses: actions/delete-package-versions@ba4d22f25141387e5ab82cfec079de6d2df96815
-      #   with:
-      #     package-version-ids: "${{ steps.version.outputs.ids }}"
-      #     package-name: 'ecoflow_exporter'
-      #     package-type: 'container'
-
+      - name: Delete package after PR merge
+        if: ${{ github.event_name == 'push' || github.event.pull_request.merged == true }}
+        uses: smartsquaregmbh/delete-old-packages@v0.6.0
+        with:
+          type: container
+          user: ${{ github.repository_owner }}
+          keep: 0
+          names: |
+            ecoflow_exporter
+          version-pattern: "^pr\\-${{github.event.pull_request.number}}$"
