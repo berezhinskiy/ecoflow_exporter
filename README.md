@@ -13,7 +13,7 @@ The project provides:
 - Bash script to extract EcoFlow MQTT credentials
 - Python program that accepts a number of arguments to collect information about a device and exports the collected metrics to a prometheus endpoint
 - [Dashboard for Grafana](https://grafana.com/grafana/dashboards/17812-ecoflow-mqtt/)
-- [Docker image](https://hub.docker.com/repository/docker/berezhinskiy/ecoflow-mqtt-prometheus-exporter) for your convenience
+- [Docker image](https://github.com/berezhinskiy/ecoflow_exporter/pkgs/container/ecoflow_exporter) for your convenience
 
 Exporter collects all metrics names and their values sent by the device to MQTT EcoFlow Broker. In case of any new objects in the queue, metrics will be generated automatically based on the JSON object key/value. For example, payload:
 
