@@ -39,6 +39,15 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
+      - name: Delete PR package after merge
+        uses: smartsquaregmbh/delete-old-packages@v0.6.0
+        with:
+          type: container
+          user: ${{ github.repository_owner }}
+          names: |
+            ecoflow_exporter
+          version-pattern: "^pr-${{github.event.pull_request.number}}$"
+
       - name: Build and push
         uses: docker/build-push-action@v3
         with:
@@ -62,10 +71,3 @@ jobs:
       #     package-name: 'ecoflow_exporter'
       #     package-type: 'container'
 
-      - name: Delete PR package after merge
-        uses: smartsquaregmbh/delete-old-packages@v0.6.0
-        with:
-          type: container
-          names: |
-            ecoflow_exporter
-          version-pattern: "^pr-${{github.event.pull_request.number}}$"
