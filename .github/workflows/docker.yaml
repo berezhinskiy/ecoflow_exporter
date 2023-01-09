@@ -9,7 +9,7 @@ on:
       - CHANGELOG.md
       - .gitignore
     tags:
-      - 'v*'
+      - '*'
   pull_request:
     branches:
       - master
@@ -45,20 +45,19 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: "${{ steps.meta.outputs.tags }}"
 
       - name: Get package version id
         uses: castlabs/get-package-version-id-action@v2.0
         # if: ${{ github.event_name == 'push' || github.event.pull_request.merged == true }}
         id: version
         with:
-          version: pr-${{github.event.pull_request.number}}
+          version: "pr-${{github.event.pull_request.number}}"
 
       - name: Delete PR package after merge
         # if: ${{ github.event_name == 'push' || github.event.pull_request.merged == true }}
         uses: actions/delete-package-versions@v4
         with:
-          package-version-ids: ${{ steps.version.outputs.ids }}
+          package-version-ids: "${{ steps.version.outputs.ids }}"
           package-name: ecoflow_exporter
           package-type: container
-          token: ${{ secrets.GITHUB_TOKEN }}
