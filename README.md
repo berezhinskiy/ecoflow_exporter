@@ -4,18 +4,17 @@
 
 An implementation of a Prometheus exporter for [EcoFlow](https://www.ecoflow.com/) products. To receive information from the device, exporter works the same way as the official mobile application by subscribing to EcoFlow MQTT Broker `mqtt.ecoflow.com`
 
-Unlike REST API exporters, it is not required to request for `APP_KEY` and `SECRET_KEY` since MQTT credentials can be extracted from `api.ecoflow.com` (see [Usage](#usage) section). Another benefit of such implementation is that it provides much more device information:
+Unlike REST API exporters, it is not required to request for `APP_KEY` and `SECRET_KEY` since MQTT credentials can be extracted from `api.ecoflow.com`. Another benefit of such implementation is that it provides much more device information:
 
 [![Dashboard](images/EcoflowMQTT.png?raw=true)](https://grafana.com/grafana/dashboards/17812-ecoflow/)
 
 The project provides:
 
-- Bash script to extract EcoFlow MQTT credentials
-- Python program that accepts a number of arguments to collect information about a device and exports the collected metrics to a prometheus endpoint
+- [Python program](ecoflow_exporter.py) that accepts a number of arguments to collect information about a device and exports the collected metrics to a prometheus endpoint
 - [Dashboard for Grafana](https://grafana.com/grafana/dashboards/17812-ecoflow/)
 - [Docker image](https://github.com/berezhinskiy/ecoflow_exporter/pkgs/container/ecoflow_exporter) for your convenience
 
-Exporter collects all metrics names and their values sent by the device to MQTT EcoFlow Broker. In case of any new objects in the queue, metrics will be generated automatically based on the JSON object key/value. For example, payload:
+The exporter collects all possible metrics names and their values sent by the device to MQTT EcoFlow Broker. In case of any new objects in the queue, new metrics will be generated automatically based on the JSON object key/value. For example, payload:
 
 ```json
 {
@@ -37,7 +36,7 @@ ecoflow_inv_ac_in_vol{device="XXXXXXXXXXXXXXXX"} 242182.0
 ecoflow_inv_inv_out_vol{device="XXXXXXXXXXXXXXXX"} 244582.0
 ```
 
-All metrics are prefixed with `ecoflow` and reports label `device` for multiple device support (see [Usage](#usage) section)
+All metrics are prefixed with `ecoflow` and reports label `device` for multiple device support
 
 ## Disclaimers
 
@@ -54,51 +53,21 @@ Please, create an issue to let me know if exporter works well (or not) with your
 
 ## Usage
 
-- Get your unit's serial number (displayed inside application)
-- Get MQTT credentials for your EcoFlow account:
-
-```bash
-> bash get_mqtt_credentials.sh
-Checking if jq is installed
-Checking if base64 is installed
-Checking if curl is installed
-Checking if sed is installed
-
-Everything is ready to extract the mqtt data
-Please log in now:
-
-Ecoflow email:
-Ecoflow password:
-{
-  "code": "0",
-  "message": "Success",
-  "data": {
-    "url": "mqtt.ecoflow.com",
-    "port": "8883",
-    "protocol": "mqtts",
-    "certificateAccount": "app-b12d847861bb84eaa103446f606d41bb",
-    "certificatePassword": "28dd5feff0bf4420bfcdaecfc18418a6"
-  }
-}
-```
-
+- Connect the device to WiFi and register an EcoFlow account using the official mobile application
+- Get your unit's serial number
 - Exporter is parameterized via environment variables:
 
 Required:
 
 `DEVICE_SN` - the device serial number
 
-`MQTT_USERNAME` - the username provided by script as `certificateAccount`
+`ECOFLOW_USERNAME` - EcoFlow account username
 
-`MQTT_PASSWORD` - the password provided by script as `certificatePassword`
+`ECOFLOW_PASSWORD` - EcoFlow account password
 
 Optional:
 
 `DEVICE_NAME` - If given, this name will be exported as `device` label instead of the device serial number
-
-`MQTT_BROKER` - (default: `mqtt.ecoflow.com`)
-
-`MQTT_PORT` - (default: `8883`)
 
 `EXPORTER_PORT` - (default: `9090`)
 
@@ -107,7 +76,7 @@ Optional:
 - Example of running docker image:
 
 ```bash
-docker run -e DEVICE_SN=<your device SN> -e MQTT_USERNAME=<your MQTT username> -e MQTT_PASSWORD=<your MQTT password> -it -p 9090:9090 --network=host ghcr.io/berezhinskiy/ecoflow_exporter
+docker run -e DEVICE_SN=<your device SN> -e ECOFLOW_USERNAME=<your username> -e ECOFLOW_PASSWORD=<your password> -it -p 9090:9090 --network=host ghcr.io/berezhinskiy/ecoflow_exporter
 ```
 
 will run the image with the exporter on `*:9090`
