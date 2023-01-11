@@ -6,13 +6,13 @@ An implementation of a Prometheus exporter for [EcoFlow](https://www.ecoflow.com
 
 Unlike REST API exporters, it is not required to request for `APP_KEY` and `SECRET_KEY` since MQTT credentials can be extracted from `api.ecoflow.com` (see [Usage](#usage) section). Another benefit of such implementation is that it provides much more device information:
 
-[![Dashboard](images/EcoflowMQTT.png?raw=true)](https://grafana.com/grafana/dashboards/17812-ecoflow-mqtt/)
+[![Dashboard](images/EcoflowMQTT.png?raw=true)](https://grafana.com/grafana/dashboards/17812-ecoflow/)
 
 The project provides:
 
 - Bash script to extract EcoFlow MQTT credentials
 - Python program that accepts a number of arguments to collect information about a device and exports the collected metrics to a prometheus endpoint
-- [Dashboard for Grafana](https://grafana.com/grafana/dashboards/17812-ecoflow-mqtt/)
+- [Dashboard for Grafana](https://grafana.com/grafana/dashboards/17812-ecoflow/)
 - [Docker image](https://github.com/berezhinskiy/ecoflow_exporter/pkgs/container/ecoflow_exporter) for your convenience
 
 Exporter collects all metrics names and their values sent by the device to MQTT EcoFlow Broker. In case of any new objects in the queue, metrics will be generated automatically based on the JSON object key/value. For example, payload:

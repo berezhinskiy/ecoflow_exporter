@@ -4,10 +4,10 @@ on:
   push:
     branches:
       - master
-    paths-ignore:
-      - README.md
-      - CHANGELOG.md
-      - .gitignore
+    paths:
+      - ecoflow_exporter.py
+      - requirements.txt
+      - Dockerfile
     tags:
       - 'v*'
   pull_request:
