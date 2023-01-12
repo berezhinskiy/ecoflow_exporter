@@ -1,4 +1,7 @@
-FROM python:3.10.5-buster
+FROM python:3.11-alpine
+
+LABEL maintainer="Yaroslav Berezhinskiy <yaroslav@berezhinskiy.name>"
+LABEL description="An implementation of a Prometheus exporter for EcoFlow portable power stations"
 
 RUN apt update -y && apt upgrade -y
 
