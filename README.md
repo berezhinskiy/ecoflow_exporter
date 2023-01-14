@@ -81,6 +81,32 @@ docker run -e DEVICE_SN=<your device SN> -e ECOFLOW_USERNAME=<your username> -e 
 
 will run the image with the exporter on `*:9090`
 
+### Quick Start
+
+Exporter should run along with Prometheus and (if you need a fancy dashboard) Grafana. To run them all together, do the following:
+1. Copy whole folder from example at https://github.com/docker/awesome-compose/tree/master/prometheus-grafana
+2. Update `compose.yml` by adding new service:
+
+       services:
+         ...
+         ecoflow_exporter:
+           image: ghcr.io/berezhinskiy/ecoflow_exporter
+           environment:
+             DEVICE_SN: <device id shown in the mobile application>
+             ECOFLOW_USERNAME: <email entered in the mobile application>
+             ECOFLOW_PASSWORD: "<password entereed in the mobile application>"
+3. Update file `prometheus/prometheus.yml` by adding new scrape_configs->static_configs->targets:
+
+       scrape_configs:
+       - ...
+         static_configs:
+         - targets:
+           ...
+           - ecoflow_exporter:9090
+4. Run `docker compose up -d`
+5. Open `http://localhost:3000/` in browser. Use login/password from Grafana section in `compose.yml`.
+6. Import Grafana dashboard: Dashboards -> Browse -> New -> Import, `17812` (see this ID at `Dashboard for Grafana` link), select the only existing Prometheus dataset.
+
 ## Metrics
 
 Prepared by exporter itself:
