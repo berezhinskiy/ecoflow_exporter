@@ -36,7 +36,7 @@ services:
 
   ecoflow_exporter:
     image: ghcr.io/berezhinskiy/ecoflow_exporter
-    container_name: grafana
+    container_name: ecoflow_exporter
     ports:
       - 9091:9091
     restart: unless-stopped
