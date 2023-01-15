@@ -44,6 +44,7 @@ services:
       DEVICE_SN: <DEVICE_SN>
       ECOFLOW_USERNAME: <ECOFLOW_USERNAME>
       ECOFLOW_PASSWORD: "<ECOFLOW_PASSWORD>"
+      EXPORTER_PORT: 9091
 
 volumes:
   prom_data:
