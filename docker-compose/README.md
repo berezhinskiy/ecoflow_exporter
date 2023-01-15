@@ -61,13 +61,14 @@ When deploying the stack, docker compose maps port the default ports for each se
 ## Deploy with docker compose
 
 ```plain
-$ docker compose up -d
-Creating network "prometheus-grafana_default" with the default driver
-Creating volume "prometheus-grafana_prom_data" with default driver
-...
-Creating grafana    ... done
-Creating prometheus ... done
-Attaching to prometheus, grafana
+$ sudo docker compose up -d
+[+] Running 6/6
+ ⠿ Network docker-compose_default     Created
+ ⠿ Volume "docker-compose_prom_data"  Created
+ ⠿ Container alertmanager             Started
+ ⠿ Container grafana                  Started
+ ⠿ Container prometheus               Started
+ ⠿ Container ecoflow_exporter         Started
 
 ```
 
@@ -75,8 +76,13 @@ Attaching to prometheus, grafana
 
 Listing containers must show two containers running and the port mapping as below:
 
-```plain
-$ docker ps
+```bash
+$ sudo docker ps -a
+CONTAINER ID   IMAGE                                   COMMAND                  CREATED              STATUS          PORTS                                       NAMES
+6e300b56ad58   prom/prometheus                         "/bin/prometheus --c…"   About a minute ago   Up 59 seconds   0.0.0.0:9090->9090/tcp, :::9090->9090/tcp   prometheus
+3a13d5b37398   prom/alertmanager                       "/bin/alertmanager -…"   About a minute ago   Up 59 seconds   0.0.0.0:9093->9093/tcp, :::9093->9093/tcp   alertmanager
+de22630b4d3a   ghcr.io/berezhinskiy/ecoflow_exporter   "python /ecoflow_exp…"   About a minute ago   Up 59 seconds   0.0.0.0:9091->9091/tcp, :::9091->9091/tcp   ecoflow_exporter
+1d61e570968d   grafana/grafana                         "/run.sh"                About a minute ago   Up 59 seconds   0.0.0.0:3000->3000/tcp, :::3000->3000/tcp   grafana
 
 ```
 
