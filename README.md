@@ -13,6 +13,7 @@ The project provides:
 - [Python program](ecoflow_exporter.py) that accepts a number of arguments to collect information about a device and exports the collected metrics to a prometheus endpoint
 - [Dashboard for Grafana](https://grafana.com/grafana/dashboards/17812-ecoflow/)
 - [Docker image](https://github.com/berezhinskiy/ecoflow_exporter/pkgs/container/ecoflow_exporter) for your convenience
+- [Quick Start guide](docker-compose/) for your pleasure
 
 The exporter collects all possible metrics names and their values sent by the device to MQTT EcoFlow Broker. In case of any new objects in the queue, new metrics will be generated automatically based on the JSON object key/value. For example, payload:
 
@@ -82,31 +83,9 @@ docker run -e DEVICE_SN=<your device SN> -e ECOFLOW_USERNAME=<your username> -e 
 
 will run the image with the exporter on `*:9090`
 
-### Quick Start
+## Quick Start
 
-Exporter should run along with Prometheus and (if you need a fancy dashboard) Grafana. To run them all together, do the following:
-1. Copy whole folder from example at https://github.com/docker/awesome-compose/tree/master/prometheus-grafana
-2. Update `compose.yml` by adding new service:
-
-       services:
-         ...
-         ecoflow_exporter:
-           image: ghcr.io/berezhinskiy/ecoflow_exporter
-           environment:
-             DEVICE_SN: <device id shown in the mobile application>
-             ECOFLOW_USERNAME: <email entered in the mobile application>
-             ECOFLOW_PASSWORD: "<password entereed in the mobile application>"
-3. Update file `prometheus/prometheus.yml` by adding new scrape_configs->static_configs->targets:
-
-       scrape_configs:
-       - ...
-         static_configs:
-         - targets:
-           ...
-           - ecoflow_exporter:9090
-4. Run `docker compose up -d`
-5. Open `http://localhost:3000/` in browser. Use login/password from Grafana section in `compose.yml`.
-6. Import Grafana dashboard: Dashboards -> Browse -> New -> Import, `17812` (see this ID at `Dashboard for Grafana` link), select the only existing Prometheus dataset.
+Don't know anything about Prometheus? Wanna a quick start? Lazy person? [This guide](docker-compose/) is for you.
 
 ## Metrics
 
