@@ -36,8 +36,8 @@ templates:
 receivers:
   - name: telegram
     telegram_configs:
-    - bot_token: <BOT_TOKEN>
-      chat_id: <CHAT_ID>
+    - bot_token: <TELEGRAM_BOT_TOKEN>
+      chat_id: <TELEGRAM_CHAT_ID>
       api_url: https://api.telegram.org
       message: '{{ template "telegram.template" . }}'
       parse_mode: MarkdownV2
