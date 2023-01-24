@@ -69,7 +69,7 @@ When deploying the stack, docker compose maps port the default ports for each se
 
 To run them all together, do the following:
 
-- Create `.env` file inside `docker-compose` folder with the following:
+- Create `.env` file inside `docker-compose` folder:
 
 ```bash
 # Serial number of your device shown in the mobile application
@@ -80,7 +80,7 @@ ECOFLOW_USERNAME=<ECOFLOW_USERNAME>
 ECOFLOW_PASSWORD=<ECOFLOW_PASSWORD>
 ```
 
-- If you don't want to receive notifications to Telegram, comment out `alertmanager` section in [compose.yaml](compose.yaml#L14-L23). Otherwise, replace `<TELEGRAM_BOT_TOKEN>` and `<TELEGRAM_CHAT_ID>` with your values in [alertmanager.yaml](alertmanager/alertmanager.yml#L39-L40)
+- If you don't want to receive notifications to Telegram, comment out `alertmanager` section in [compose.yaml](compose.yaml#L14-L23) and `alerting` section in [prometheus.yml](prometheus/prometheus.yml#L7-L12) Otherwise, replace `<TELEGRAM_BOT_TOKEN>` and `<TELEGRAM_CHAT_ID>` with your values in [alertmanager.yaml](alertmanager/alertmanager.yml#L39-L40)
 
 - Create and start containers:
 
@@ -114,7 +114,7 @@ de22630b4d3a   ghcr.io/berezhinskiy/ecoflow_exporter   "python /ecoflow_exp…" 
 
 Navigate to [http://localhost:3000](http://localhost:3000) in your web browser and use the login credentials `admin/grafana` to access Grafana. It is already configured with prometheus as the default datasource.
 
-Navigate to Dashboards → Import dashboard, import ID `17812`, select the only existing Prometheus dataset.
+Navigate to Dashboards → Import dashboard, import ID `17812`, select the only existing Prometheus datasource.
 
 ## Troubleshooting
 
