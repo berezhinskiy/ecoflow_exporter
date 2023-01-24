@@ -2,7 +2,7 @@
 
 ## Compose
 
-Exporter should run along with [Prometheus](http://prometheus.io) and [Grafana](https://grafana.com). If you want to recive notifications to [Telegram](https://telegram.org) is requred to startup [Alertmanager](https://prometheus.io/docs/alerting/latest/alertmanager/) as well.
+Exporter should run along with [Prometheus](http://prometheus.io) and [Grafana](https://grafana.com). If you want to recive notifications to [Telegram](https://telegram.org) it is requred to startup [Alertmanager](https://prometheus.io/docs/alerting/latest/alertmanager/) as well.
 
 Project structure:
 
@@ -78,7 +78,7 @@ ECOFLOW_USERNAME=<ECOFLOW_USERNAME>
 ECOFLOW_PASSWORD=<ECOFLOW_PASSWORD>
 ```
 
-- If you don't want to receive notifications to Telegram, comment out `alertmanager` section in [compose.yaml](compose.yaml#L14-L23). Otherwise, replace `<TELEGRAM_BOT_TOKEN>` and `<TELEGRAM_CHAT_ID>` with your values in [alertmanager.yaml](alertmanager/alertmanager.yml)
+- If you don't want to receive notifications to Telegram, comment out `alertmanager` section in [compose.yaml](compose.yaml#L14-L23). Otherwise, replace `<TELEGRAM_BOT_TOKEN>` and `<TELEGRAM_CHAT_ID>` with your values in [alertmanager.yaml](alertmanager/alertmanager.yml#L39-L40)
 
 > ⚠️ This article not covers Telegram-related things. Such as new bot token creation process, joining to the chat and so on. Please, talk directly to [Bot Father](https://telegram.me/BotFather)
 
@@ -122,6 +122,10 @@ Navigate to Dashboards → Import dashboard, import ID `17812` via grafana.com, 
 $ docker compose logs
 ...
 ```
+
+Navigate to [http://localhost:9090](http://localhost:9090) in your web browser to access directly the web interface of prometheus.
+
+Navigate to [http://localhost:9093](http://localhost:9093) in your web browser to access directly the web interface of alertmanager.
 
 ## Destroy
 
