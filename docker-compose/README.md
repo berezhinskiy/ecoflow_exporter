@@ -84,7 +84,9 @@ GRAFANA_USERNAME="admin"
 GRAFANA_PASSWORD="grafana"
 ```
 
-- Replace `<TELEGRAM_BOT_TOKEN>` and `<TELEGRAM_CHAT_ID>` with your values in [alertmanager.yaml](alertmanager/alertmanager.yml#L39-L40) If you don't want to receive notifications to Telegram, comment out `alertmanager` section in [compose.yaml](compose.yaml#L14-L23) and `alerting` section in [prometheus.yml](prometheus/prometheus.yml#L7-L12)
+- Replace `<TELEGRAM_BOT_TOKEN>` and `<TELEGRAM_CHAT_ID>` with your values in [alertmanager.yaml](alertmanager/alertmanager.yml#L39-L40)
+
+> If you don't want to receive notifications to Telegram, comment out `alertmanager` section in [compose.yaml](compose.yaml#L14-L23) and `alerting` section in [prometheus.yml](prometheus/prometheus.yml#L7-L12)
 
 - Create and start containers:
 
