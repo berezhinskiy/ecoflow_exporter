@@ -8,6 +8,7 @@ on:
       - ecoflow_exporter.py
       - requirements.txt
       - Dockerfile
+      - 'docker-compose/**'
     tags:
       - 'v*'
   pull_request:

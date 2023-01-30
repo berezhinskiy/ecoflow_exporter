@@ -1,0 +1,52 @@
+{{/* Emoji of the alert */}}
+{{- define "__telegram_emoji" -}}
+    {{- if gt (len .Alerts.Firing) 0 -}}
+        {{- if eq .CommonLabels.severity "critical" -}}
+            ‼️
+        {{- else if eq .CommonLabels.severity "warning" -}}
+            ⚠️
+        {{- else if eq .CommonLabels.severity "info" -}}
+            ℹ️
+        {{- else -}}
+            🤷🏻‍♂️
+        {{- end -}}
+    {{- end }}
+    {{- if gt (len .Alerts.Resolved) 0 -}}
+            ✅
+    {{- end -}}
+{{- end -}}
+
+{{/* Status of the alert */}}
+{{- define "__telegram_status" -}}
+    {{- if gt (len .Alerts.Firing) 0 -}}
+        \[FIRING:{{ (len .Alerts.Firing) }}\]
+    {{- end }}
+    {{- if gt (len .Alerts.Resolved) 0 -}}
+        \[RESOLVED\]
+    {{- end -}}
+{{- end -}}
+
+{{/* Title of the alert */}}
+{{- define "__telegram_title" -}}
+    {{- if (index .Alerts 0).Annotations.summary -}}
+        {{ (index .Alerts 0).Annotations.summary }}
+    {{- end -}}
+{{- end -}}
+
+{{/* The text to display in the alert */}}
+{{- define "telegram.template" -}}
+    {{ template "__telegram_emoji" . }} {{ template "__telegram_status" . }} {{ template "__telegram_title" . }}
+    {{- "\n" -}}
+    {{- "\n" -}}
+    {{- range .Alerts -}}
+        {{- if .Annotations.description -}}
+            *Description*: {{ .Annotations.description }}
+        {{- "\n" -}}
+        {{- end }}
+        {{- if .Annotations.message -}}
+            *Message*: {{ .Annotations.message }}
+        {{- "\n" -}}
+        {{- "\n" -}}
+        {{- end }}
+    {{- end -}}
+{{- end -}}

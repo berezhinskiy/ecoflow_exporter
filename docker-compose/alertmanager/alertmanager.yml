@@ -1,0 +1,43 @@
+route:
+  # When a new group of alerts is created by an incoming alert, wait at
+  # least 'group_wait' to send the initial notification.
+  # This way ensures that you get multiple alerts for the same group that start
+  # firing shortly after another are batched together on the first
+  # notification.
+  group_wait: 10s
+
+  # When the first notification was sent, wait 'group_interval' to send a batch
+  # of new alerts that started firing for that group.
+  group_interval: 30s
+
+  # If an alert has successfully been sent, wait 'repeat_interval' to
+  # resend them.
+  repeat_interval: 12h
+
+  group_by:
+    - alertname
+    - alertstate
+    - device
+
+  receiver: telegram
+
+  # All the above attributes are inherited by all child routes and can
+  # overwritten on each.
+  routes:
+    - receiver: telegram
+      group_wait: 5s
+      match_re:
+        severity: critial|warning
+      continue: true
+
+templates:
+  - /etc/alertmanager/templates/*.tmpl
+
+receivers:
+  - name: telegram
+    telegram_configs:
+    - bot_token: <TELEGRAM_BOT_TOKEN>
+      chat_id: <TELEGRAM_CHAT_ID>
+      api_url: https://api.telegram.org
+      message: '{{ template "telegram.template" . }}'
+      parse_mode: MarkdownV2

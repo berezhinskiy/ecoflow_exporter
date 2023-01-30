@@ -1,0 +1,50 @@
+services:
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    ports:
+      - 9090:9090
+    restart: unless-stopped
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prom_data:/prometheus
+
+  alertmanager:
+    image: prom/alertmanager
+    container_name: alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+    ports:
+      - 9093:9093
+    restart: unless-stopped
+    volumes:
+      - ./alertmanager:/etc/alertmanager
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - 3000:3000
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USERNAME}
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_PASSWORD}"
+    volumes:
+      - ./grafana:/etc/grafana/provisioning/datasources
+
+  ecoflow_exporter:
+    image: ghcr.io/berezhinskiy/ecoflow_exporter
+    container_name: ecoflow_exporter
+    ports:
+      - 9091:9091
+    restart: unless-stopped
+    environment:
+      DEVICE_SN: ${DEVICE_SN}
+      ECOFLOW_USERNAME: ${ECOFLOW_USERNAME}
+      ECOFLOW_PASSWORD: "${ECOFLOW_PASSWORD}"
+      EXPORTER_PORT: 9091
+
+volumes:
+  prom_data:
