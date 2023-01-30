@@ -3,7 +3,7 @@ groups:
   rules:
     - alert: EcoFlowOffline
       expr: ecoflow_online == 0
-      for: 0m
+      for: 1m
       labels:
         severity: critical
       annotations:

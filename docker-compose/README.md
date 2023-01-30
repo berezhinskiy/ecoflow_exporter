@@ -73,11 +73,15 @@ To run them all together, do the following:
 
 ```bash
 # Serial number of your device shown in the mobile application
-DEVICE_SN=<DEVICE_SN>
+DEVICE_SN="<DEVICE_SN>"
 # Email entered in the mobile application
-ECOFLOW_USERNAME=<ECOFLOW_USERNAME>
+ECOFLOW_USERNAME="<ECOFLOW_USERNAME>"
 # Password entereed in the mobile application
-ECOFLOW_PASSWORD=<ECOFLOW_PASSWORD>
+ECOFLOW_PASSWORD="<ECOFLOW_PASSWORD>"
+# Username for Grafana Web interface
+GRAFANA_USERNAME="admin"
+# Password for Grafana Web interface
+GRAFANA_PASSWORD="grafana"
 ```
 
 - Replace `<TELEGRAM_BOT_TOKEN>` and `<TELEGRAM_CHAT_ID>` with your values in [alertmanager.yaml](alertmanager/alertmanager.yml#L39-L40) If you don't want to receive notifications to Telegram, comment out `alertmanager` section in [compose.yaml](compose.yaml#L14-L23) and `alerting` section in [prometheus.yml](prometheus/prometheus.yml#L7-L12)
@@ -112,18 +116,25 @@ de22630b4d3a   ghcr.io/berezhinskiy/ecoflow_exporter   "python /ecoflow_exp…" 
 
 ## Import Grafana dasboard
 
-Navigate to [http://localhost:3000](http://localhost:3000) in your web browser and use the login credentials `admin/grafana` to access Grafana. It is already configured with prometheus as the default datasource.
+Navigate to [http://localhost:3000](http://localhost:3000) in your web browser and use `GRAFANA_USERNAME` / `GRAFANA_PASSWORD` credentials from `.env` file to access Grafana. It is already configured with prometheus as the default datasource.
 
 Navigate to Dashboards → Import dashboard → import ID `17812`, select the only existing Prometheus datasource.
 
 ## Troubleshooting
 
+Check the logs:
+
 ```plain
 $ docker compose logs
-...
 ```
 
-Navigate to [http://localhost:9090](http://localhost:9090) in your web browser to access directly the web interface of Prometheus.
+Get raw data from `ecoflow_exporter`:
+
+```plain
+$ curl http://127.0.0.1:9091
+```
+
+Navigate to [http://localhost:9090](http://localhost:9090) in your web browser to access directly the web interface of Prometheus. Check `Status` → `Targets`. The state of `ecoflow_exporter` should be `UP`. Otherwise, see the `Error` column.
 
 Navigate to [http://localhost:9093](http://localhost:9093) in your web browser to access directly the web interface of Alertmanager.
 
