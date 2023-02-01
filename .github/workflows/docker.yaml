@@ -9,6 +9,7 @@ on:
       - requirements.txt
       - Dockerfile
       - 'docker-compose/**'
+      - '.github/**'
     tags:
       - 'v*'
   pull_request:
