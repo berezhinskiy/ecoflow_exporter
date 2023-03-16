@@ -8,9 +8,10 @@ import json
 import re
 import requests
 import base64
+import uuid
 import paho.mqtt.client as mqtt
 from queue import Queue
-from prometheus_client import start_http_server, Gauge, Counter
+from prometheus_client import start_http_server, REGISTRY, Gauge, Counter
 
 
 class EcoflowMetricException(Exception):
@@ -25,6 +26,7 @@ class EcoflowAuthentication:
         self.mqtt_port = 8883
         self.mqtt_username = None
         self.mqtt_password = None
+        self.mqtt_client_id = None
         self.authorize()
 
     def authorize(self):
@@ -61,6 +63,7 @@ class EcoflowAuthentication:
             self.mqtt_port = int(response["data"]["port"])
             self.mqtt_username = response["data"]["certificateAccount"]
             self.mqtt_password = response["data"]["certificatePassword"]
+            self.mqtt_client_id = f"ANDROID_{str(uuid.uuid4()).upper()}_{user_id}"
         except KeyError as key:
             raise Exception(f"Failed to extract key {key} from {response}")
 
@@ -86,15 +89,16 @@ class EcoflowAuthentication:
 
 class EcoflowMQTT():
 
-    def __init__(self, message_queue, device_sn, username, password, addr, port):
+    def __init__(self, message_queue, device_sn, username, password, addr, port, client_id):
         self.message_queue = message_queue
         self.addr = addr
         self.port = port
         self.username = username
         self.password = password
+        self.client_id = client_id
         self.topic = f"/app/device/property/{device_sn}"
 
-        self.client = mqtt.Client(f'python-mqtt-{random.randint(0, 100)}')
+        self.client = mqtt.Client(self.client_id)
         self.client.username_pw_set(self.username, self.password)
         self.client.tls_set(certfile=None, keyfile=None, cert_reqs=ssl.CERT_REQUIRED)
         self.client.tls_insecure_set(False)
@@ -102,7 +106,7 @@ class EcoflowMQTT():
         self.client.on_disconnect = self.on_disconnect
         self.client.on_message = self.on_message
 
-        log.info(f"Connecting to MQTT Broker {self.addr}:{self.port}")
+        log.info(f"Connecting to MQTT Broker {self.addr}:{self.port} using client id {self.client_id}")
         self.client.connect(self.addr, self.port)
         self.client.loop_start()
 
@@ -257,7 +261,7 @@ def main():
         case "INFO":
             log_level = log.INFO
         case "WARNING":
-            log_level = log.ERROR
+            log_level = log.WARNING
         case "ERROR":
             log_level = log.ERROR
         case _:
@@ -283,10 +287,15 @@ def main():
 
     message_queue = Queue()
 
-    EcoflowMQTT(message_queue, device_sn, auth.mqtt_username, auth.mqtt_password, auth.mqtt_url, auth.mqtt_port)
+    EcoflowMQTT(message_queue, device_sn, auth.mqtt_username, auth.mqtt_password, auth.mqtt_url, auth.mqtt_port, auth.mqtt_client_id)
 
     metrics = Worker(message_queue, device_name)
-    start_http_server(exporter_port)
+
+    # Disable Process and Platform collectors
+    for coll in list(REGISTRY._collector_to_names.keys()):
+        REGISTRY.unregister(coll)
+
+    start_http_server(exporter_port,)
     metrics.loop()
 
 
