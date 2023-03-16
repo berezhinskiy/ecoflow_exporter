@@ -73,11 +73,11 @@ To run them all together, do the following:
 
 ```bash
 # Serial number of your device shown in the mobile application
-DEVICE_SN="<DEVICE_SN>"
+DEVICE_SN="DEVICE_SN"
 # Email entered in the mobile application
-ECOFLOW_USERNAME="<ECOFLOW_USERNAME>"
+ECOFLOW_USERNAME="ECOFLOW_USERNAME"
 # Password entereed in the mobile application
-ECOFLOW_PASSWORD="<ECOFLOW_PASSWORD>"
+ECOFLOW_PASSWORD="ECOFLOW_PASSWORD"
 # Username for Grafana Web interface
 GRAFANA_USERNAME="admin"
 # Password for Grafana Web interface
@@ -88,9 +88,10 @@ GRAFANA_PASSWORD="grafana"
 
 > If you don't want to receive notifications to Telegram, comment out `alertmanager` section in [compose.yaml](compose.yaml#L14-L23) and `alerting` section in [prometheus.yml](prometheus/prometheus.yml#L7-L12)
 
-- Create and start containers:
+- Change directory to `docker-compose`, then create and start containers:
 
 ```plain
+$ cd docker-compose
 $ docker compose up -d
 [+] Running 6/6
  ⠿ Network docker-compose_default     Created
