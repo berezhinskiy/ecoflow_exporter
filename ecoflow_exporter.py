@@ -279,7 +279,7 @@ def main():
     ecoflow_username = os.getenv("ECOFLOW_USERNAME")
     ecoflow_password = os.getenv("ECOFLOW_PASSWORD")
     exporter_port = int(os.getenv("EXPORTER_PORT", "9090"))
-    collecting_interval_seconds = os.getenv("COLLECTING_INTERVAL") or 10
+    collecting_interval_seconds = int(os.getenv("COLLECTING_INTERVAL", "10"))
 
     if (not device_sn or not ecoflow_username or not ecoflow_password):
         log.error("Please, provide all required environment variables: DEVICE_SN, ECOFLOW_USERNAME, ECOFLOW_PASSWORD")
