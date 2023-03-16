@@ -253,6 +253,11 @@ class Worker:
 
 
 def main():
+
+    # Disable Process and Platform collectors
+    for coll in list(REGISTRY._collector_to_names.keys()):
+        REGISTRY.unregister(coll)
+
     log_level = os.getenv("LOG_LEVEL", "INFO")
 
     match log_level:
@@ -290,10 +295,6 @@ def main():
     EcoflowMQTT(message_queue, device_sn, auth.mqtt_username, auth.mqtt_password, auth.mqtt_url, auth.mqtt_port, auth.mqtt_client_id)
 
     metrics = Worker(message_queue, device_name)
-
-    # Disable Process and Platform collectors
-    for coll in list(REGISTRY._collector_to_names.keys()):
-        REGISTRY.unregister(coll)
 
     start_http_server(exporter_port,)
     metrics.loop()
