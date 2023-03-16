@@ -176,7 +176,7 @@ class EcoflowMetric:
 
 
 class Worker:
-    def __init__(self, message_queue, device_name, collecting_interval_seconds=5):
+    def __init__(self, message_queue, device_name, collecting_interval_seconds=10):
         self.message_queue = message_queue
         self.device_name = device_name
         self.collecting_interval_seconds = collecting_interval_seconds
@@ -279,6 +279,7 @@ def main():
     ecoflow_username = os.getenv("ECOFLOW_USERNAME")
     ecoflow_password = os.getenv("ECOFLOW_PASSWORD")
     exporter_port = int(os.getenv("EXPORTER_PORT", "9090"))
+    collecting_interval_seconds = int(os.getenv("COLLECTING_INTERVAL", "10"))
 
     if (not device_sn or not ecoflow_username or not ecoflow_password):
         log.error("Please, provide all required environment variables: DEVICE_SN, ECOFLOW_USERNAME, ECOFLOW_PASSWORD")
@@ -294,9 +295,9 @@ def main():
 
     EcoflowMQTT(message_queue, device_sn, auth.mqtt_username, auth.mqtt_password, auth.mqtt_url, auth.mqtt_port, auth.mqtt_client_id)
 
-    metrics = Worker(message_queue, device_name)
+    metrics = Worker(message_queue, device_name, collecting_interval_seconds)
 
-    start_http_server(exporter_port,)
+    start_http_server(exporter_port)
     metrics.loop()
 
 
