@@ -2,7 +2,7 @@
 
 Exporter should run along with [Prometheus](http://prometheus.io) and [Grafana](https://grafana.com). If you want to recive notifications to [Telegram](https://telegram.org) it is requred to startup [Alertmanager](https://prometheus.io/docs/alerting/latest/alertmanager/) as well.
 
-⚠️ This article not covers Telegram-related things. Such as new bot token creation process, joining to the chat and so on. Please, talk directly to [Bot Father](https://telegram.me/BotFather)
+⚠️ This article does not cover Telegram-related things such as new bot token creation process, joining to the chat and so on. Please, talk directly to [Bot Father](https://telegram.me/BotFather)
 
 ## Compose
 
@@ -61,13 +61,13 @@ The compose file defines a stack with four services:
 - `grafana`
 - `ecoflow_exporter`
 
-When deploying the stack, docker compose maps port the default ports for each service to the equivalent ports on the host in order to inspect easier the web interface of each service.
+When deploying the stack, docker compose maps the default ports for each service to the equivalent ports on the host in order to more easily inspect the web interface of each service.
 
 ## Deploy with docker compose
 
 ⚠️ Make sure the ports `9090`, `9091`, `9093` and `3000` on the host are not already in use.
 
-To run them all together, do the following:
+To run all the services together, do the following:
 
 - Create `.env` file inside `docker-compose` folder:
 
@@ -88,7 +88,7 @@ GRAFANA_PASSWORD="grafana"
 
 > If you don't want to receive notifications to Telegram, comment out `alertmanager` section in [compose.yaml](compose.yaml#L14-L23) and `alerting` section in [prometheus.yml](prometheus/prometheus.yml#L7-L12)
 
-- Change directory to `docker-compose`, then create and start containers:
+- Change directory to `docker-compose`, then create and start the containers:
 
 ```plain
 $ cd docker-compose
@@ -139,7 +139,7 @@ $ curl http://127.0.0.1:9091
 
 Navigate to [http://localhost:9090](http://localhost:9090) in your web browser to access directly the web interface of Prometheus. Check `Status` → `Targets`. The state of `ecoflow_exporter` should be `UP`. Otherwise, see the `Error` column.
 
-Navigate to [http://localhost:9093](http://localhost:9093) in your web browser to access directly the web interface of Alertmanager.
+Navigate to [http://localhost:9093](http://localhost:9093) in your web browser to directly access the web interface of Alertmanager.
 
 ## Destroy
 
