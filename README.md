@@ -7,6 +7,7 @@ An implementation of a Prometheus exporter for [EcoFlow](https://www.ecoflow.com
 Unlike REST API exporters, it is not required to request for `APP_KEY` and `SECRET_KEY` since MQTT credentials can be extracted from `api.ecoflow.com`. Another benefit of such implementation is that it provides much more device information:
 
 [![Dashboard](images/EcoflowMQTT.png?raw=true)](https://grafana.com/grafana/dashboards/17812-ecoflow/)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fberezhinskiy%2Fecoflow_exporter.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fberezhinskiy%2Fecoflow_exporter?ref=badge_shield)
 
 The project provides:
 
@@ -265,3 +266,7 @@ Actual list of payload metrics:
 - `ecoflow_pd_wifi_rssi`
 - `ecoflow_pd_wifi_ver`
 - `ecoflow_pd_wire_watts`
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fberezhinskiy%2Fecoflow_exporter.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fberezhinskiy%2Fecoflow_exporter?ref=badge_large)
