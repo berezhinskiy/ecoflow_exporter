@@ -1,5 +1,10 @@
 # ⚡ EcoFlow to Prometheus exporter
 
+![GitHub](https://img.shields.io/github/license/berezhinskiy/ecoflow_exporter)
+![Build Status](https://github.com/berezhinskiy/ecoflow_exporter/workflows/CI/badge.svg)
+![GitHub branch checks state](https://img.shields.io/github/checks-status/berezhinskiy/ecoflow_exporter/master)
+![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/berezhinskiy/ecoflow_exporter)
+
 ## About
 
 An implementation of a Prometheus exporter for [EcoFlow](https://www.ecoflow.com/) products. To receive information from the device, exporter works the same way as the official mobile application by subscribing to EcoFlow MQTT Broker `mqtt.ecoflow.com`
