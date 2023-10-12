@@ -1,7 +1,7 @@
 import logging as log
 import sys
 import os
-import random
+import signal
 import ssl
 import time
 import json
@@ -279,7 +279,14 @@ class Worker:
                     ac_in_current.set(0)
 
 
+def signal_handler(signum, frame):
+    log.info(f"Received signal {signum}. Exiting...")
+    sys.exit(0)
+
+
 def main():
+    # Register the signal handler for SIGTERM
+    signal.signal(signal.SIGTERM, signal_handler)
 
     # Disable Process and Platform collectors
     for coll in list(REGISTRY._collector_to_names.keys()):
@@ -326,7 +333,13 @@ def main():
     metrics = Worker(message_queue, device_name, collecting_interval_seconds)
 
     start_http_server(exporter_port)
-    metrics.loop()
+
+    try:
+        metrics.loop()
+
+    except KeyboardInterrupt:
+        log.info("Received KeyboardInterrupt. Exiting...")
+        sys.exit(0)
 
 
 if __name__ == '__main__':
