@@ -1,7 +1,7 @@
 import logging as log
 import sys
 import os
-import random
+import signal
 import ssl
 import time
 import json
@@ -12,6 +12,13 @@ import uuid
 import paho.mqtt.client as mqtt
 from queue import Queue
 from prometheus_client import start_http_server, REGISTRY, Gauge, Counter
+from threading import Timer
+
+
+class RepeatTimer(Timer):
+    def run(self):
+        while not self.finished.wait(self.interval):
+            self.function(*self.args, **self.kwargs)
 
 
 class EcoflowMetricException(Exception):
@@ -89,7 +96,7 @@ class EcoflowAuthentication:
 
 class EcoflowMQTT():
 
-    def __init__(self, message_queue, device_sn, username, password, addr, port, client_id):
+    def __init__(self, message_queue, device_sn, username, password, addr, port, client_id, timeout_seconds):
         self.message_queue = message_queue
         self.addr = addr
         self.port = port
@@ -97,6 +104,20 @@ class EcoflowMQTT():
         self.password = password
         self.client_id = client_id
         self.topic = f"/app/device/property/{device_sn}"
+        self.timeout_seconds = timeout_seconds
+        self.last_message_time = None
+        self.client = None
+
+        self.connect()
+
+        self.idle_timer = RepeatTimer(10, self.idle_reconnect)
+        self.idle_timer.daemon = True
+        self.idle_timer.start()
+
+    def connect(self):
+        if self.client:
+            self.client.loop_stop()
+            self.client.disconnect()
 
         self.client = mqtt.Client(self.client_id)
         self.client.username_pw_set(self.username, self.password)
@@ -109,6 +130,11 @@ class EcoflowMQTT():
         log.info(f"Connecting to MQTT Broker {self.addr}:{self.port} using client id {self.client_id}")
         self.client.connect(self.addr, self.port)
         self.client.loop_start()
+
+    def idle_reconnect(self):
+        if self.last_message_time and time.time() - self.last_message_time > self.timeout_seconds:
+            log.error(f"No messages received for {self.timeout_seconds} seconds. Reconnecting to MQTT")
+            self.connect()
 
     def on_connect(self, client, userdata, flags, rc):
         match rc:
@@ -139,6 +165,7 @@ class EcoflowMQTT():
 
     def on_message(self, client, userdata, message):
         self.message_queue.put(message.payload.decode("utf-8"))
+        self.last_message_time = time.time()
 
 
 class EcoflowMetric:
@@ -252,7 +279,14 @@ class Worker:
                     ac_in_current.set(0)
 
 
+def signal_handler(signum, frame):
+    log.info(f"Received signal {signum}. Exiting...")
+    sys.exit(0)
+
+
 def main():
+    # Register the signal handler for SIGTERM
+    signal.signal(signal.SIGTERM, signal_handler)
 
     # Disable Process and Platform collectors
     for coll in list(REGISTRY._collector_to_names.keys()):
@@ -280,6 +314,7 @@ def main():
     ecoflow_password = os.getenv("ECOFLOW_PASSWORD")
     exporter_port = int(os.getenv("EXPORTER_PORT", "9090"))
     collecting_interval_seconds = int(os.getenv("COLLECTING_INTERVAL", "10"))
+    timeout_seconds = int(os.getenv("MQTT_TIMEOUT", "60"))
 
     if (not device_sn or not ecoflow_username or not ecoflow_password):
         log.error("Please, provide all required environment variables: DEVICE_SN, ECOFLOW_USERNAME, ECOFLOW_PASSWORD")
@@ -293,12 +328,18 @@ def main():
 
     message_queue = Queue()
 
-    EcoflowMQTT(message_queue, device_sn, auth.mqtt_username, auth.mqtt_password, auth.mqtt_url, auth.mqtt_port, auth.mqtt_client_id)
+    EcoflowMQTT(message_queue, device_sn, auth.mqtt_username, auth.mqtt_password, auth.mqtt_url, auth.mqtt_port, auth.mqtt_client_id, timeout_seconds)
 
     metrics = Worker(message_queue, device_name, collecting_interval_seconds)
 
     start_http_server(exporter_port)
-    metrics.loop()
+
+    try:
+        metrics.loop()
+
+    except KeyboardInterrupt:
+        log.info("Received KeyboardInterrupt. Exiting...")
+        sys.exit(0)
 
 
 if __name__ == '__main__':
