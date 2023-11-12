@@ -11,16 +11,16 @@ services:
       - ./prometheus:/etc/prometheus
       - prom_data:/prometheus
 
-  alertmanager:
-    image: prom/alertmanager
-    container_name: alertmanager
-    command:
-      - '--config.file=/etc/alertmanager/alertmanager.yml'
-    ports:
-      - 9093:9093
-    restart: unless-stopped
-    volumes:
-      - ./alertmanager:/etc/alertmanager
+  # alertmanager:
+  #   image: prom/alertmanager
+  #   container_name: alertmanager
+  #   command:
+  #     - '--config.file=/etc/alertmanager/alertmanager.yml'
+  #   ports:
+  #     - 9093:9093
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ./alertmanager:/etc/alertmanager
 
   grafana:
     image: grafana/grafana
@@ -46,6 +46,8 @@ services:
       ECOFLOW_USERNAME: ${ECOFLOW_USERNAME}
       ECOFLOW_PASSWORD: "${ECOFLOW_PASSWORD}"
       EXPORTER_PORT: 9091
+      MQTT_TIMEOUT: 10
+      COLLECTING_INTERVAL: 5
 
 volumes:
   prom_data:

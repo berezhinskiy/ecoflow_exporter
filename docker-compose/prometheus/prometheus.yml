@@ -1,15 +1,15 @@
 # my global config
 global:
-  scrape_interval: 10s # Set the scrape interval to every 10 seconds. Default is every 1 minute.
-  scrape_timeout: 10s
-  evaluation_interval: 10s # Evaluate rules every 10 seconds. The default is every 1 minute.
+  scrape_interval: 5s # Set the scrape interval to every 10 seconds. Default is every 1 minute.
+  scrape_timeout: 5s
+  evaluation_interval: 5s # Evaluate rules every 10 seconds. The default is every 1 minute.
 
-alerting:
-  alertmanagers:
-    - scheme: http
-      static_configs:
-        - targets:
-          - alertmanager:9093
+# alerting:
+#   alertmanagers:
+#     - scheme: http
+#       static_configs:
+#         - targets:
+#           - alertmanager:9093
 
 rule_files:
   - 'alerts/*.yml'
@@ -20,10 +20,10 @@ scrape_configs:
       - targets:
         - localhost:9090
 
-  - job_name: alertmanager
-    static_configs:
-      - targets:
-        - alertmanager:9093
+  # - job_name: alertmanager
+  #   static_configs:
+  #     - targets:
+  #       - alertmanager:9093
 
   - job_name: ecoflow
     static_configs:
