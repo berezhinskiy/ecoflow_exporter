@@ -33,6 +33,7 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_PASSWORD}"
     volumes:
       - ./grafana:/etc/grafana/provisioning/datasources
+      - grafana_data:/var/lib/grafana
 
   ecoflow_exporter:
     image: ghcr.io/berezhinskiy/ecoflow_exporter
@@ -48,3 +49,4 @@ services:
 
 volumes:
   prom_data:
+  grafana_data:

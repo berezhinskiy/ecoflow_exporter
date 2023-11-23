@@ -5,13 +5,13 @@ on:
     branches:
       - master
     paths:
-      - ecoflow_exporter.py
+      - "*.py"
       - requirements.txt
       - Dockerfile
-      - 'docker-compose/**'
-      - '.github/**'
+      - "docker-compose/**"
+      - ".github/**"
     tags:
-      - 'v*'
+      - "v*"
   pull_request:
     branches:
       - master
@@ -19,25 +19,33 @@ on:
 jobs:
   build-docker:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GHCR
-        if: ${{ github.event_name != 'pull_request' }}
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
+      - name: Login to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/ecoflow_exporter
+          images: |
+            ghcr.io/${{ github.repository_owner }}/ecoflow_exporter
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -46,7 +54,7 @@ jobs:
             type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'master') }}
 
       - name: Build and push
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v5
         with:
           context: .
           platforms: linux/amd64,linux/arm64
