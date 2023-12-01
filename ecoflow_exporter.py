@@ -145,11 +145,17 @@ class EcoflowMQTT():
                 connect_process.terminate()
                 if connect_process.exitcode == 0:
                     log.info("Reconnection successful, continuing")
+                    # Reset last_message_time here to avoid a race condition between idle_reconnect getting called again
+                    # before on_connect() or on_message() are called
+                    self.last_message_time = None
                     break
                 else:
                     log.error("Reconnection errored out, or timed out, attempted to reconnect...")
 
     def on_connect(self, client, userdata, flags, rc):
+        # Initialize the time of last message at least once upon connection so that other things that rely on that to be
+        # set (like idle_reconnect) work
+        self.last_message_time = time.time()
         match rc:
             case 0:
                 self.client.subscribe(self.topic)
