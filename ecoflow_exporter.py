@@ -29,7 +29,7 @@ class EcoflowAuthentication:
     def __init__(self, ecoflow_username, ecoflow_password):
         self.ecoflow_username = ecoflow_username
         self.ecoflow_password = ecoflow_password
-        self.mqtt_url = "mqtt.ecoflow.com"
+        self.mqtt_url = f"{os.getenv('ECOFLOW_MQTT_HOST','mqtt.ecoflow.com')}"
         self.mqtt_port = 8883
         self.mqtt_username = None
         self.mqtt_password = None
@@ -37,7 +37,7 @@ class EcoflowAuthentication:
         self.authorize()
 
     def authorize(self):
-        url = "https://api.ecoflow.com/auth/login"
+        url = f"https://{os.getenv('ECOFLOW_REST_HOST','api.ecoflow.com')}/auth/login"
         headers = {"lang": "en_US", "content-type": "application/json"}
         data = {"email": self.ecoflow_username,
                 "password": base64.b64encode(self.ecoflow_password.encode()).decode(),
@@ -57,7 +57,7 @@ class EcoflowAuthentication:
 
         log.info(f"Successfully logged in: {user_name}")
 
-        url = "https://api.ecoflow.com/iot-auth/app/certification"
+        url = f"https://{os.getenv('ECOFLOW_REST_HOST','api.ecoflow.com')}/iot-auth/app/certification"
         headers = {"lang": "en_US", "authorization": f"Bearer {token}"}
         data = {"userId": user_id}
 
