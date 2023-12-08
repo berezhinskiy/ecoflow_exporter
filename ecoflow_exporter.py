@@ -6,13 +6,14 @@ import ssl
 import time
 import json
 import re
-import requests
 import base64
 import uuid
-import paho.mqtt.client as mqtt
 from queue import Queue
-from prometheus_client import start_http_server, REGISTRY, Gauge, Counter
 from threading import Timer
+from multiprocessing import Process
+import requests
+import paho.mqtt.client as mqtt
+from prometheus_client import start_http_server, REGISTRY, Gauge, Counter
 
 
 class RepeatTimer(Timer):
@@ -134,9 +135,27 @@ class EcoflowMQTT():
     def idle_reconnect(self):
         if self.last_message_time and time.time() - self.last_message_time > self.timeout_seconds:
             log.error(f"No messages received for {self.timeout_seconds} seconds. Reconnecting to MQTT")
-            self.connect()
+            # We pull the following into a separate process because there are actually quite a few things that can go
+            # wrong inside the connection code, including it just timing out and never returning. So this gives us a
+            # measure of safety around reconnection
+            while True:
+                connect_process = Process(target=self.connect)
+                connect_process.start()
+                connect_process.join(timeout=60)
+                connect_process.terminate()
+                if connect_process.exitcode == 0:
+                    log.info("Reconnection successful, continuing")
+                    # Reset last_message_time here to avoid a race condition between idle_reconnect getting called again
+                    # before on_connect() or on_message() are called
+                    self.last_message_time = None
+                    break
+                else:
+                    log.error("Reconnection errored out, or timed out, attempted to reconnect...")
 
     def on_connect(self, client, userdata, flags, rc):
+        # Initialize the time of last message at least once upon connection so that other things that rely on that to be
+        # set (like idle_reconnect) work
+        self.last_message_time = time.time()
         match rc:
             case 0:
                 self.client.subscribe(self.topic)
