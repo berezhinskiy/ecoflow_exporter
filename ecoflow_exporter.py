@@ -120,7 +120,7 @@ class EcoflowMQTT():
             self.client.loop_stop()
             self.client.disconnect()
 
-        self.client = mqtt.Client(self.client_id)
+        self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, self.client_id)
         self.client.username_pw_set(self.username, self.password)
         self.client.tls_set(certfile=None, keyfile=None, cert_reqs=ssl.CERT_REQUIRED)
         self.client.tls_insecure_set(False)
