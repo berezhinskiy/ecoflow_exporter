@@ -52,12 +52,13 @@ All metrics are prefixed with `ecoflow` and reports label `device` for multiple 
 
 ⚠️ This has only been tested with the following EcoFlow products:
 
-- __River Max__
-- __River 2__
-- __River 2 Max__
-- __DELTA 2__
-- __DELTA Pro__
+- __RIVER Max__
+- __RIVER 2__
+- __RIVER 2 Max__
 - __DELTA Max__
+- __DELTA 2__
+- __DELTA 2 Max__
+- __DELTA Pro__
 
 Please, create an issue to let me know if exporter works well (or not) with your model.
 
