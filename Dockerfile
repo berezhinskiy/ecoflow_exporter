@@ -1,4 +1,4 @@
-FROM python:3.11-alpine
+FROM python:3.12-alpine
 
 LABEL org.opencontainers.image.authors="Yaroslav Berezhinskiy <yaroslav@berezhinskiy.name>"
 LABEL org.opencontainers.image.description="An implementation of a Prometheus exporter for EcoFlow portable power stations"

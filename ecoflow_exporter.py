@@ -120,7 +120,7 @@ class EcoflowMQTT():
             self.client.loop_stop()
             self.client.disconnect()
 
-        self.client = mqtt.Client(self.client_id)
+        self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, self.client_id)
         self.client.username_pw_set(self.username, self.password)
         self.client.tls_set(certfile=None, keyfile=None, cert_reqs=ssl.CERT_REQUIRED)
         self.client.tls_insecure_set(False)
@@ -152,34 +152,34 @@ class EcoflowMQTT():
                 else:
                     log.error("Reconnection errored out, or timed out, attempted to reconnect...")
 
-    def on_connect(self, client, userdata, flags, rc):
+    def on_connect(self, client, userdata, flags, reason_code, properties):
         # Initialize the time of last message at least once upon connection so that other things that rely on that to be
         # set (like idle_reconnect) work
         self.last_message_time = time.time()
-        match rc:
-            case 0:
+        match reason_code:
+            case "Success":
                 self.client.subscribe(self.topic)
                 log.info(f"Subscribed to MQTT topic {self.topic}")
-            case -1:
+            case "Keep alive timeout":
                 log.error("Failed to connect to MQTT: connection timed out")
-            case 1:
-                log.error("Failed to connect to MQTT: incorrect protocol version")
-            case 2:
+            case "Unsupported protocol version":
+                log.error("Failed to connect to MQTT: unsupported protocol version")
+            case "Client identifier not valid":
                 log.error("Failed to connect to MQTT: invalid client identifier")
-            case 3:
+            case "Server unavailable":
                 log.error("Failed to connect to MQTT: server unavailable")
-            case 4:
+            case "Bad user name or password":
                 log.error("Failed to connect to MQTT: bad username or password")
-            case 5:
+            case "Not authorized":
                 log.error("Failed to connect to MQTT: not authorised")
             case _:
-                log.error(f"Failed to connect to MQTT: another error occured: {rc}")
+                log.error(f"Failed to connect to MQTT: another error occured: {reason_code}")
 
         return client
 
-    def on_disconnect(self, client, userdata, rc):
-        if rc != 0:
-            log.error(f"Unexpected MQTT disconnection: {rc}. Will auto-reconnect")
+    def on_disconnect(self, client, userdata, flags, reason_code, properties):
+        if reason_code > 0:
+            log.error(f"Unexpected MQTT disconnection: {reason_code}. Will auto-reconnect")
             time.sleep(5)
 
     def on_message(self, client, userdata, message):
