@@ -27,9 +27,10 @@ class EcoflowMetricException(Exception):
 
 
 class EcoflowAuthentication:
-    def __init__(self, ecoflow_username, ecoflow_password):
+    def __init__(self, ecoflow_username, ecoflow_password, ecoflow_api_host):
         self.ecoflow_username = ecoflow_username
         self.ecoflow_password = ecoflow_password
+        self.ecoflow_api_host = ecoflow_api_host
         self.mqtt_url = "mqtt.ecoflow.com"
         self.mqtt_port = 8883
         self.mqtt_username = None
@@ -38,7 +39,7 @@ class EcoflowAuthentication:
         self.authorize()
 
     def authorize(self):
-        url = "https://api.ecoflow.com/auth/login"
+        url = f"https://{self.ecoflow_api_host}/auth/login"
         headers = {"lang": "en_US", "content-type": "application/json"}
         data = {"email": self.ecoflow_username,
                 "password": base64.b64encode(self.ecoflow_password.encode()).decode(),
@@ -58,7 +59,7 @@ class EcoflowAuthentication:
 
         log.info(f"Successfully logged in: {user_name}")
 
-        url = "https://api.ecoflow.com/iot-auth/app/certification"
+        url = f"https://{self.ecoflow_api_host}/iot-auth/app/certification"
         headers = {"lang": "en_US", "authorization": f"Bearer {token}"}
         data = {"userId": user_id}
 
@@ -275,7 +276,7 @@ class Worker:
         log.debug(f"Processing params: {params}")
         for ecoflow_payload_key in params.keys():
             ecoflow_payload_value = params[ecoflow_payload_key]
-            if isinstance(ecoflow_payload_value, list):
+            if not isinstance(ecoflow_payload_value, (int, float)):
                 log.warning(f"Skipping unsupported metric {ecoflow_payload_key}: {ecoflow_payload_value}")
                 continue
 
@@ -331,6 +332,7 @@ def main():
     device_name = os.getenv("DEVICE_NAME") or device_sn
     ecoflow_username = os.getenv("ECOFLOW_USERNAME")
     ecoflow_password = os.getenv("ECOFLOW_PASSWORD")
+    ecoflow_api_host = os.getenv("ECOFLOW_API_HOST", "api.ecoflow.com")
     exporter_port = int(os.getenv("EXPORTER_PORT", "9090"))
     collecting_interval_seconds = int(os.getenv("COLLECTING_INTERVAL", "10"))
     timeout_seconds = int(os.getenv("MQTT_TIMEOUT", "60"))
@@ -340,7 +342,7 @@ def main():
         sys.exit(1)
 
     try:
-        auth = EcoflowAuthentication(ecoflow_username, ecoflow_password)
+        auth = EcoflowAuthentication(ecoflow_username, ecoflow_password, ecoflow_api_host)
     except Exception as error:
         log.error(error)
         sys.exit(1)
