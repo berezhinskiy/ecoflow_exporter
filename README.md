@@ -80,6 +80,8 @@ Optional:
 
 `DEVICE_NAME` - If given, this name will be exported as `device` label instead of the device serial number
 
+`ECOFLOW_API_HOST` - (default: `api.ecoflow.com`).
+
 `EXPORTER_PORT` - (default: `9090`)
 
 `LOG_LEVEL` - (default: `INFO`) Possible values: `DEBUG`, `INFO`, `WARNING`, `ERROR`
