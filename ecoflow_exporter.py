@@ -273,8 +273,7 @@ class Worker:
 
     def process_payload(self, params):
         log.debug(f"Processing params: {params}")
-        for ecoflow_payload_key in params.keys():
-            ecoflow_payload_value = params[ecoflow_payload_key]
+        for ecoflow_payload_key, ecoflow_payload_value in params.items():
             if not isinstance(ecoflow_payload_value, (int, float)):
                 log.warning(f"Skipping unsupported metric {ecoflow_payload_key}: {ecoflow_payload_value}")
                 continue
