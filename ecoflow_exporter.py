@@ -8,12 +8,21 @@ import json
 import re
 import base64
 import uuid
+import threading
 from queue import Queue
 from threading import Timer
-from multiprocessing import Process
+
 import requests
 import paho.mqtt.client as mqtt
 from prometheus_client import start_http_server, REGISTRY, Gauge, Counter
+
+# Shared Prometheus metric registries (thread-safe)
+_gauge_registry = {}
+_gauge_registry_lock = threading.Lock()
+
+_online_gauge = None
+_mqtt_counter = None
+_worker_metrics_lock = threading.Lock()
 
 
 class RepeatTimer(Timer):
@@ -35,7 +44,7 @@ class EcoflowAuthentication:
         self.mqtt_port = 8883
         self.mqtt_username = None
         self.mqtt_password = None
-        self.mqtt_client_id = None
+        self.user_id = None
         self.authorize()
 
     def authorize(self):
@@ -72,7 +81,7 @@ class EcoflowAuthentication:
             self.mqtt_port = int(response["data"]["port"])
             self.mqtt_username = response["data"]["certificateAccount"]
             self.mqtt_password = response["data"]["certificatePassword"]
-            self.mqtt_client_id = f"ANDROID_{str(uuid.uuid4()).upper()}_{user_id}"
+            self.user_id = user_id
         except KeyError as key:
             raise Exception(f"Failed to extract key {key} from {response}")
 
@@ -98,14 +107,16 @@ class EcoflowAuthentication:
 
 class EcoflowMQTT():
 
-    def __init__(self, message_queue, device_sn, username, password, addr, port, client_id, timeout_seconds):
+    def __init__(self, message_queue, device_sn, username, password, addr, port, user_id, timeout_seconds):
         self.message_queue = message_queue
         self.addr = addr
         self.port = port
         self.username = username
         self.password = password
-        self.client_id = client_id
+        self.client_id = f"ANDROID_{str(uuid.uuid4()).upper()}_{user_id}"
+        self.device_sn = device_sn
         self.topic = f"/app/device/property/{device_sn}"
+        self.topic_get = f"/app/{user_id}/{device_sn}/thing/property/get"
         self.timeout_seconds = timeout_seconds
         self.last_message_time = None
         self.client = None
@@ -115,6 +126,10 @@ class EcoflowMQTT():
         self.idle_timer = RepeatTimer(10, self.idle_reconnect)
         self.idle_timer.daemon = True
         self.idle_timer.start()
+
+        self.quota_timer = RepeatTimer(15, self.request_data)
+        self.quota_timer.daemon = True
+        self.quota_timer.start()
 
     def connect(self):
         if self.client:
@@ -135,23 +150,30 @@ class EcoflowMQTT():
 
     def idle_reconnect(self):
         if self.last_message_time and time.time() - self.last_message_time > self.timeout_seconds:
-            log.error(f"No messages received for {self.timeout_seconds} seconds. Reconnecting to MQTT")
-            # We pull the following into a separate process because there are actually quite a few things that can go
-            # wrong inside the connection code, including it just timing out and never returning. So this gives us a
-            # measure of safety around reconnection
+            log.error(f"[{self.device_sn}] No messages received for {self.timeout_seconds} seconds. Reconnecting to MQTT")
             while True:
-                connect_process = Process(target=self.connect)
-                connect_process.start()
-                connect_process.join(timeout=60)
-                connect_process.terminate()
-                if connect_process.exitcode == 0:
-                    log.info("Reconnection successful, continuing")
-                    # Reset last_message_time here to avoid a race condition between idle_reconnect getting called again
-                    # before on_connect() or on_message() are called
+                connect_thread = threading.Thread(target=self.connect, daemon=True)
+                connect_thread.start()
+                connect_thread.join(timeout=60)
+                if not connect_thread.is_alive():
+                    log.info(f"[{self.device_sn}] Reconnection successful, continuing")
                     self.last_message_time = None
                     break
                 else:
-                    log.error("Reconnection errored out, or timed out, attempted to reconnect...")
+                    log.error(f"[{self.device_sn}] Reconnection timed out, retrying...")
+
+    def request_data(self):
+        if self.client and self.client.is_connected():
+            payload = json.dumps({
+                "from": "Android",
+                "id": str(int(time.time() * 1000)),
+                "moduleType": 0,
+                "operateType": "latestQuotas",
+                "params": {},
+                "version": "1.0"
+            })
+            log.debug(f"[{self.device_sn}] Requesting data via {self.topic_get}")
+            self.client.publish(self.topic_get, payload)
 
     def on_connect(self, client, userdata, flags, reason_code, properties):
         # Initialize the time of last message at least once upon connection so that other things that rely on that to be
@@ -161,6 +183,7 @@ class EcoflowMQTT():
             case "Success":
                 self.client.subscribe(self.topic)
                 log.info(f"Subscribed to MQTT topic {self.topic}")
+                self.request_data()
             case "Keep alive timeout":
                 log.error("Failed to connect to MQTT: connection timed out")
             case "Unsupported protocol version":
@@ -193,7 +216,12 @@ class EcoflowMetric:
         self.ecoflow_payload_key = ecoflow_payload_key
         self.device_name = device_name
         self.name = f"ecoflow_{self.convert_ecoflow_key_to_prometheus_name()}"
-        self.metric = Gauge(self.name, f"value from MQTT object key {ecoflow_payload_key}", labelnames=["device"])
+        with _gauge_registry_lock:
+            if self.name in _gauge_registry:
+                self.metric = _gauge_registry[self.name]
+            else:
+                self.metric = Gauge(self.name, f"value from MQTT object key {ecoflow_payload_key}", labelnames=["device"])
+                _gauge_registry[self.name] = self.metric
 
     def convert_ecoflow_key_to_prometheus_name(self):
         # bms_bmsStatus.maxCellTemp -> bms_bms_status_max_cell_temp
@@ -218,29 +246,35 @@ class EcoflowMetric:
         self.metric.labels(device=self.device_name).set(value)
 
     def clear(self):
-        log.debug(f"Clear {self.name}")
-        self.metric.clear()
+        log.debug(f"Clear {self.name} for device {self.device_name}")
+        self.metric.remove(self.device_name)
 
 
 class Worker:
     def __init__(self, message_queue, device_name, collecting_interval_seconds=10):
+        global _online_gauge, _mqtt_counter
         self.message_queue = message_queue
         self.device_name = device_name
         self.collecting_interval_seconds = collecting_interval_seconds
         self.metrics_collector = []
-        self.online = Gauge("ecoflow_online", "1 if device is online", labelnames=["device"])
-        self.mqtt_messages_receive_total = Counter("ecoflow_mqtt_messages_receive_total", "total MQTT messages", labelnames=["device"])
+        with _worker_metrics_lock:
+            if _online_gauge is None:
+                _online_gauge = Gauge("ecoflow_online", "1 if device is online", labelnames=["device"])
+            if _mqtt_counter is None:
+                _mqtt_counter = Counter("ecoflow_mqtt_messages_receive_total", "total MQTT messages", labelnames=["device"])
+        self.online = _online_gauge
+        self.mqtt_messages_receive_total = _mqtt_counter
 
     def loop(self):
         time.sleep(self.collecting_interval_seconds)
         while True:
             queue_size = self.message_queue.qsize()
             if queue_size > 0:
-                log.info(f"Processing {queue_size} event(s) from the message queue")
+                log.info(f"[{self.device_name}] Processing {queue_size} event(s) from the message queue")
                 self.online.labels(device=self.device_name).set(1)
                 self.mqtt_messages_receive_total.labels(device=self.device_name).inc(queue_size)
             else:
-                log.info("Message queue is empty. Assuming that the device is offline")
+                log.info(f"[{self.device_name}] Message queue is empty. Assuming that the device is offline")
                 self.online.labels(device=self.device_name).set(0)
                 # Clear metrics for NaN (No data) instead of last value
                 for metric in self.metrics_collector:
@@ -304,6 +338,25 @@ def signal_handler(signum, frame):
     sys.exit(0)
 
 
+def parse_device_list():
+    device_sn_raw = os.getenv("DEVICE_SN", "")
+    device_name_raw = os.getenv("DEVICE_NAME", "")
+
+    sns = [s.strip() for s in device_sn_raw.split(",") if s.strip()]
+    names = [s.strip() for s in device_name_raw.split(",")] if device_name_raw else []
+
+    if not sns:
+        log.error("Please, provide DEVICE_SN environment variable")
+        sys.exit(1)
+
+    devices = []
+    for i, sn in enumerate(sns):
+        name = names[i] if i < len(names) and names[i] else sn
+        devices.append({"sn": sn, "name": name})
+
+    return devices
+
+
 def main():
     # Register the signal handler for SIGTERM
     signal.signal(signal.SIGTERM, signal_handler)
@@ -328,8 +381,7 @@ def main():
 
     log.basicConfig(stream=sys.stdout, level=log_level, format='%(asctime)s %(levelname)-7s %(message)s')
 
-    device_sn = os.getenv("DEVICE_SN")
-    device_name = os.getenv("DEVICE_NAME") or device_sn
+    devices = parse_device_list()
     ecoflow_username = os.getenv("ECOFLOW_USERNAME")
     ecoflow_password = os.getenv("ECOFLOW_PASSWORD")
     ecoflow_api_host = os.getenv("ECOFLOW_API_HOST", "api.ecoflow.com")
@@ -337,7 +389,7 @@ def main():
     collecting_interval_seconds = int(os.getenv("COLLECTING_INTERVAL", "10"))
     timeout_seconds = int(os.getenv("MQTT_TIMEOUT", "60"))
 
-    if (not device_sn or not ecoflow_username or not ecoflow_password):
+    if not ecoflow_username or not ecoflow_password:
         log.error("Please, provide all required environment variables: DEVICE_SN, ECOFLOW_USERNAME, ECOFLOW_PASSWORD")
         sys.exit(1)
 
@@ -347,17 +399,29 @@ def main():
         log.error(error)
         sys.exit(1)
 
-    message_queue = Queue()
-
-    EcoflowMQTT(message_queue, device_sn, auth.mqtt_username, auth.mqtt_password, auth.mqtt_url, auth.mqtt_port, auth.mqtt_client_id, timeout_seconds)
-
-    metrics = Worker(message_queue, device_name, collecting_interval_seconds)
-
     start_http_server(exporter_port)
 
-    try:
-        metrics.loop()
+    worker_threads = []
+    for device in devices:
+        sn = device["sn"]
+        name = device["name"]
+        log.info(f"Setting up device: {name} (SN: {sn})")
 
+        message_queue = Queue()
+
+        EcoflowMQTT(message_queue, sn, auth.mqtt_username, auth.mqtt_password, auth.mqtt_url, auth.mqtt_port, auth.user_id, timeout_seconds)
+
+        worker = Worker(message_queue, name, collecting_interval_seconds)
+
+        t = threading.Thread(target=worker.loop, name=f"worker-{name}", daemon=True)
+        t.start()
+        worker_threads.append(t)
+
+    log.info(f"Started monitoring {len(devices)} device(s)")
+
+    try:
+        while True:
+            time.sleep(1)
     except KeyboardInterrupt:
         log.info("Received KeyboardInterrupt. Exiting...")
         sys.exit(0)

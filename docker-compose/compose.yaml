@@ -4,8 +4,9 @@ services:
     container_name: prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=90d'
     ports:
-      - 9090:9090
+      - 127.0.0.1:9090:9090
     restart: unless-stopped
     volumes:
       - ./prometheus:/etc/prometheus
@@ -17,7 +18,7 @@ services:
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
     ports:
-      - 9093:9093
+      - 127.0.0.1:9093:9093
     restart: unless-stopped
     volumes:
       - ./alertmanager:/etc/alertmanager
@@ -31,21 +32,39 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USERNAME}
       GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_PASSWORD}"
+      GF_SERVER_ROOT_URL: "${GRAFANA_ROOT_URL:-http://localhost:3000}"
     volumes:
-      - ./grafana:/etc/grafana/provisioning/datasources
+      - ./grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+      - ./grafana/dashboard.yml:/etc/grafana/provisioning/dashboards/dashboard.yml
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
       - grafana_data:/var/lib/grafana
 
   ecoflow_exporter:
-    image: ghcr.io/berezhinskiy/ecoflow_exporter
+    image: ghcr.io/serhiioliinyk/ecoflow_exporter
     container_name: ecoflow_exporter
     ports:
-      - 9091:9091
+      - 127.0.0.1:9091:9091
     restart: unless-stopped
     environment:
       DEVICE_SN: ${DEVICE_SN}
+      DEVICE_NAME: ${DEVICE_NAME}
       ECOFLOW_USERNAME: ${ECOFLOW_USERNAME}
       ECOFLOW_PASSWORD: "${ECOFLOW_PASSWORD}"
       EXPORTER_PORT: 9091
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    profiles: [nginx]
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - grafana
+    restart: unless-stopped
 
 volumes:
   prom_data:

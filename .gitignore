@@ -103,6 +103,7 @@ celerybeat.pid
 
 # Environments
 .env
+docker-compose/alertmanager/alertmanager.yml
 .venv
 env/
 venv/

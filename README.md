@@ -16,7 +16,7 @@ Unlike REST API exporters, it is not required to request for `APP_KEY` and `SECR
 The project provides:
 
 - [Python program](ecoflow_exporter.py) that accepts a number of arguments to collect information about a device and exports the collected metrics to a prometheus endpoint
-- [Dashboard for Grafana](https://grafana.com/grafana/dashboards/17812-ecoflow/)
+- [Dashboard for Grafana](docker-compose/grafana/dashboards/ecoflow.json) — bundled in the repo, auto-provisioned via docker compose, includes Extra Battery panels
 - [Docker image](https://github.com/berezhinskiy/ecoflow_exporter/pkgs/container/ecoflow_exporter) for your convenience
 - [Quick Start guide](docker-compose/) for your pleasure
 
@@ -70,7 +70,7 @@ Please, create an issue to let me know if exporter works well (or not) with your
 
 Required:
 
-`DEVICE_SN` - the device serial number
+`DEVICE_SN` - the device serial number(s). For multiple devices, use comma-separated values: `DEVICE_SN=SN1,SN2`
 
 `ECOFLOW_USERNAME` - EcoFlow account username
 
@@ -78,7 +78,7 @@ Required:
 
 Optional:
 
-`DEVICE_NAME` - If given, this name will be exported as `device` label instead of the device serial number
+`DEVICE_NAME` - If given, this name will be exported as `device` label instead of the device serial number. For multiple devices, use comma-separated values in the same order as `DEVICE_SN`: `DEVICE_NAME=name1,name2`
 
 `ECOFLOW_API_HOST` - (default: `api.ecoflow.com`).
 
@@ -86,10 +86,16 @@ Optional:
 
 `LOG_LEVEL` - (default: `INFO`) Possible values: `DEBUG`, `INFO`, `WARNING`, `ERROR`
 
-- Example of running docker image:
+- Example of running docker image with a single device:
 
 ```bash
 docker run -e DEVICE_SN=<your device SN> -e ECOFLOW_USERNAME=<your username> -e ECOFLOW_PASSWORD=<your password> -it -p 9090:9090 --network=host ghcr.io/berezhinskiy/ecoflow_exporter
+```
+
+- Example with multiple devices:
+
+```bash
+docker run -e DEVICE_SN=<SN1>,<SN2> -e DEVICE_NAME=<name1>,<name2> -e ECOFLOW_USERNAME=<your username> -e ECOFLOW_PASSWORD=<your password> -it -p 9090:9090 --network=host ghcr.io/berezhinskiy/ecoflow_exporter
 ```
 
 will run the image with the exporter on `*:9090`

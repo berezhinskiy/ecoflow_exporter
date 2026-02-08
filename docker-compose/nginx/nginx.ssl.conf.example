@@ -1,0 +1,31 @@
+# Nginx config for Grafana with Let's Encrypt SSL.
+# 1. Obtain a certificate first:
+#    docker run --rm -p 80:80 certbot/certbot certonly --standalone -d your.domain.com
+# 2. Copy certs to ./nginx/certs/:
+#    cp /etc/letsencrypt/live/your.domain.com/fullchain.pem ./nginx/certs/
+#    cp /etc/letsencrypt/live/your.domain.com/privkey.pem ./nginx/certs/
+# 3. Replace nginx.conf with this file (rename to nginx.conf)
+
+server {
+    listen 80;
+    server_name your.domain.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name your.domain.com;
+
+    ssl_certificate /etc/nginx/certs/fullchain.pem;
+    ssl_certificate_key /etc/nginx/certs/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    location / {
+        proxy_pass http://grafana:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+}
