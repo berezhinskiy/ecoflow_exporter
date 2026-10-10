@@ -8,6 +8,7 @@ import json
 import re
 import base64
 import uuid
+import random
 from queue import Queue
 from threading import Timer
 from multiprocessing import Process
@@ -36,6 +37,7 @@ class EcoflowAuthentication:
         self.mqtt_username = None
         self.mqtt_password = None
         self.mqtt_client_id = None
+        self.user_id = None
         self.authorize()
 
     def authorize(self):
@@ -73,6 +75,7 @@ class EcoflowAuthentication:
             self.mqtt_username = response["data"]["certificateAccount"]
             self.mqtt_password = response["data"]["certificatePassword"]
             self.mqtt_client_id = f"ANDROID_{str(uuid.uuid4()).upper()}_{user_id}"
+            self.user_id = user_id
         except KeyError as key:
             raise Exception(f"Failed to extract key {key} from {response}")
 
@@ -98,7 +101,8 @@ class EcoflowAuthentication:
 
 class EcoflowMQTT():
 
-    def __init__(self, message_queue, device_sn, username, password, addr, port, client_id, timeout_seconds):
+    def __init__(self, message_queue, device_sn, user_id, username, password, addr, port, client_id, timeout_seconds,
+                 handshake_interval_seconds):
         self.message_queue = message_queue
         self.addr = addr
         self.port = port
@@ -106,7 +110,12 @@ class EcoflowMQTT():
         self.password = password
         self.client_id = client_id
         self.topic = f"/app/device/property/{device_sn}"
+        # The mobile app requests the latest quotas of the device through these topics. Such a request "wakes up" the
+        # device, so it starts (and keeps) streaming telemetry to self.topic
+        self.get_topic = f"/app/{user_id}/{device_sn}/thing/property/get"
+        self.get_reply_topic = f"/app/{user_id}/{device_sn}/thing/property/get_reply"
         self.timeout_seconds = timeout_seconds
+        self.handshake_interval_seconds = handshake_interval_seconds
         self.last_message_time = None
         self.client = None
 
@@ -115,6 +124,11 @@ class EcoflowMQTT():
         self.idle_timer = RepeatTimer(10, self.idle_reconnect)
         self.idle_timer.daemon = True
         self.idle_timer.start()
+
+        if self.handshake_interval_seconds > 0:
+            self.handshake_timer = RepeatTimer(self.handshake_interval_seconds, self.handshake)
+            self.handshake_timer.daemon = True
+            self.handshake_timer.start()
 
     def connect(self):
         if self.client:
@@ -153,14 +167,34 @@ class EcoflowMQTT():
                 else:
                     log.error("Reconnection errored out, or timed out, attempted to reconnect...")
 
+    def handshake(self):
+        # Mimic the mobile app opening the device page: request all latest quotas. The device replies with a full
+        # snapshot to get_reply_topic and starts pushing telemetry to self.topic
+        if not self.client or not self.client.is_connected():
+            log.debug("MQTT client is not connected. Skipping handshake")
+            return
+        payload = {
+            "id": random.randint(100000000, 999999999),
+            "version": "1.1",
+            "from": "Android",
+            "moduleType": 0,
+            "operateType": "latestQuotas",
+            "params": {}
+        }
+        log.debug(f"Sending handshake to {self.get_topic}: {payload}")
+        result = self.client.publish(self.get_topic, json.dumps(payload), qos=1)
+        if result.rc != mqtt.MQTT_ERR_SUCCESS:
+            log.error(f"Failed to publish handshake to {self.get_topic}: {mqtt.error_string(result.rc)}")
+
     def on_connect(self, client, userdata, flags, reason_code, properties):
         # Initialize the time of last message at least once upon connection so that other things that rely on that to be
         # set (like idle_reconnect) work
         self.last_message_time = time.time()
         match reason_code:
             case "Success":
-                self.client.subscribe(self.topic)
-                log.info(f"Subscribed to MQTT topic {self.topic}")
+                self.client.subscribe([(self.topic, 1), (self.get_reply_topic, 1)])
+                log.info(f"Subscribed to MQTT topics {self.topic}, {self.get_reply_topic}")
+                self.handshake()
             case "Keep alive timeout":
                 log.error("Failed to connect to MQTT: connection timed out")
             case "Unsupported protocol version":
@@ -201,7 +235,7 @@ class EcoflowMetric:
         key = self.ecoflow_payload_key.replace('.', '_')
         new = key[0].lower()
         for character in key[1:]:
-            if character.isupper() and not new[-1] == '_':
+            if character.isupper() and new[-1] != '_':
                 new += '_'
             new += character.lower()
         # Check that metric name complies with the data model for valid characters
@@ -254,9 +288,13 @@ class Worker:
 
                 try:
                     payload = json.loads(payload)
-                    params = payload['params']
-                except KeyError as key:
+                    if 'params' in payload:
+                        params = payload['params']
+                    else:
+                        params = payload['data']['quotaMap']
+                except (KeyError, TypeError) as key:
                     log.error(f"Failed to extract key {key} from payload: {payload}")
+                    continue
                 except Exception as error:
                     log.error(f"Failed to parse MQTT payload: {payload} Error: {error}")
                     continue
@@ -336,6 +374,7 @@ def main():
     exporter_port = int(os.getenv("EXPORTER_PORT", "9090"))
     collecting_interval_seconds = int(os.getenv("COLLECTING_INTERVAL", "10"))
     timeout_seconds = int(os.getenv("MQTT_TIMEOUT", "60"))
+    handshake_interval_seconds = int(os.getenv("MQTT_HANDSHAKE_INTERVAL", "30"))
 
     if (not device_sn or not ecoflow_username or not ecoflow_password):
         log.error("Please, provide all required environment variables: DEVICE_SN, ECOFLOW_USERNAME, ECOFLOW_PASSWORD")
@@ -349,7 +388,8 @@ def main():
 
     message_queue = Queue()
 
-    EcoflowMQTT(message_queue, device_sn, auth.mqtt_username, auth.mqtt_password, auth.mqtt_url, auth.mqtt_port, auth.mqtt_client_id, timeout_seconds)
+    EcoflowMQTT(message_queue, device_sn, auth.user_id, auth.mqtt_username, auth.mqtt_password, auth.mqtt_url, auth.mqtt_port,
+                auth.mqtt_client_id, timeout_seconds, handshake_interval_seconds)
 
     metrics = Worker(message_queue, device_name, collecting_interval_seconds)
 
