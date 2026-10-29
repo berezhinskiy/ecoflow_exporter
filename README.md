@@ -44,6 +44,13 @@ ecoflow_inv_inv_out_vol{device="XXXXXXXXXXXXXXXX"} 244582.0
 
 All metrics are prefixed with `ecoflow` and reports label `device` for multiple device support
 
+Arrays of numbers (e.g. voltage of every battery cell) are exported with an additional label `index`, and arrays of objects (e.g. extra batteries) are split into a metric per numeric field:
+
+```
+ecoflow_bms_master_cell_vol{device="XXXXXXXXXXXXXXXX",index="0"} 3883.0
+ecoflow_kit_product_info_details_soc{device="XXXXXXXXXXXXXXXX",index="0"} 50.0
+```
+
 ## Disclaimers
 
 ⚠️ This project is in no way connected to EcoFlow company, and is entirely developed as a fun project with no guarantees of anything.

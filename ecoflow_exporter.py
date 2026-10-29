@@ -16,6 +16,10 @@ import paho.mqtt.client as mqtt
 from prometheus_client import start_http_server, REGISTRY, Gauge, Counter
 
 
+# Arrays of bytes that are actually strings, e.g. bmsMaster.packSn: [48, 48, ...] or bmsMaster.hwEdition: [86, 48, 46, 48]
+NON_NUMERIC_ARRAY_KEYS = re.compile(r"(Sn|Edition)$")
+
+
 class RepeatTimer(Timer):
     def run(self):
         while not self.finished.wait(self.interval):
@@ -225,12 +229,15 @@ class EcoflowMQTT():
 
 
 class EcoflowMetric:
-    def __init__(self, ecoflow_payload_key, device_name):
+    def __init__(self, ecoflow_payload_key, device_name, indexed=False):
         self.ecoflow_payload_key = ecoflow_payload_key
         self.device_name = device_name
+        # Indexed metrics are built from arrays (e.g. voltage of every battery cell) and have an extra label "index"
+        self.indexed = indexed
         self.name = f"ecoflow_{self.convert_ecoflow_key_to_prometheus_name()}"
+        labelnames = ["device", "index"] if indexed else ["device"]
         try:
-            self.metric = Gauge(self.name, f"value from MQTT object key {ecoflow_payload_key}", labelnames=["device"])
+            self.metric = Gauge(self.name, f"value from MQTT object key {ecoflow_payload_key}", labelnames=labelnames)
         except ValueError as error:
             # E.g. two different payload keys are converted to the same metric name
             raise EcoflowMetricException(f"Cannot create metric {self.name} from payload key {ecoflow_payload_key}: {error}")
@@ -250,12 +257,16 @@ class EcoflowMetric:
             raise EcoflowMetricException(f"Cannot convert payload key {self.ecoflow_payload_key} to comply with the Prometheus data model. Please, raise an issue!")
         return new
 
-    def set(self, value):
+    def set(self, value, index=None):
         # According to best practices for naming metrics and labels, the voltage should be in volts and the current in amperes
         # WARNING! This will ruin all Prometheus historical data and backward compatibility of Grafana dashboard
         # value = value / 1000 if value.endswith("_vol") or value.endswith("_amp") else value
-        log.debug(f"Set {self.name} = {value}")
-        self.metric.labels(device=self.device_name).set(value)
+        if self.indexed:
+            log.debug(f"Set {self.name}[{index}] = {value}")
+            self.metric.labels(device=self.device_name, index=index).set(value)
+        else:
+            log.debug(f"Set {self.name} = {value}")
+            self.metric.labels(device=self.device_name).set(value)
 
     def clear(self):
         log.debug(f"Clear {self.name}")
@@ -267,7 +278,9 @@ class Worker:
         self.message_queue = message_queue
         self.device_name = device_name
         self.collecting_interval_seconds = collecting_interval_seconds
-        self.metrics_collector = []
+        self.metrics_collector = {}
+        # Payload keys that cannot be exported. They are logged only once, as they come with every message
+        self.unsupported_keys = set()
         self.online = Gauge("ecoflow_online", "1 if device is online", labelnames=["device"])
         self.mqtt_messages_receive_total = Counter("ecoflow_mqtt_messages_receive_total", "total MQTT messages", labelnames=["device"])
 
@@ -283,7 +296,7 @@ class Worker:
                 log.info("Message queue is empty. Assuming that the device is offline")
                 self.online.labels(device=self.device_name).set(0)
                 # Clear metrics for NaN (No data) instead of last value
-                for metric in self.metrics_collector:
+                for metric in self.metrics_collector.values():
                     metric.clear()
 
             while not self.message_queue.empty():
@@ -309,38 +322,70 @@ class Worker:
             time.sleep(self.collecting_interval_seconds)
 
     def get_metric_by_ecoflow_payload_key(self, ecoflow_payload_key):
-        for metric in self.metrics_collector:
-            if metric.ecoflow_payload_key == ecoflow_payload_key:
-                log.debug(f"Found metric {metric.name} linked to {ecoflow_payload_key}")
-                return metric
-        log.debug(f"Cannot find metric linked to {ecoflow_payload_key}")
-        return False
+        return self.metrics_collector.get(ecoflow_payload_key)
+
+    def skip_unsupported_key(self, ecoflow_payload_key, reason):
+        if ecoflow_payload_key not in self.unsupported_keys:
+            self.unsupported_keys.add(ecoflow_payload_key)
+            log.warning(f"Skipping unsupported metric {ecoflow_payload_key}: {reason}")
+
+    @staticmethod
+    def flatten_payload_value(ecoflow_payload_key, ecoflow_payload_value):
+        # Yields (key, index, value) for every numeric value. Arrays are exported with the "index" label:
+        # bmsMaster.cellVol: [3883, 3851] -> (bmsMaster.cellVol, 0, 3883), (bmsMaster.cellVol, 1, 3851)
+        # kit.productInfoDetails: [{"soc": 50}] -> (kit.productInfoDetails.soc, 0, 50)
+        if isinstance(ecoflow_payload_value, (int, float)):
+            yield ecoflow_payload_key, None, ecoflow_payload_value
+        elif isinstance(ecoflow_payload_value, list) and not NON_NUMERIC_ARRAY_KEYS.search(ecoflow_payload_key):
+            for index, item in enumerate(ecoflow_payload_value):
+                if isinstance(item, (int, float)):
+                    yield ecoflow_payload_key, str(index), item
+                elif isinstance(item, dict):
+                    for field, value in item.items():
+                        if isinstance(value, (int, float)):
+                            yield f"{ecoflow_payload_key}.{field}", str(index), value
 
     def process_payload(self, params):
         log.debug(f"Processing params: {params}")
-        for ecoflow_payload_key in params.keys():
-            ecoflow_payload_value = params[ecoflow_payload_key]
-            if not isinstance(ecoflow_payload_value, (int, float)):
-                log.warning(f"Skipping unsupported metric {ecoflow_payload_key}: {ecoflow_payload_value}")
+        for ecoflow_payload_key, ecoflow_payload_value in params.items():
+            if ecoflow_payload_key in self.unsupported_keys:
                 continue
 
-            metric = self.get_metric_by_ecoflow_payload_key(ecoflow_payload_key)
-            if not metric:
-                try:
-                    metric = EcoflowMetric(ecoflow_payload_key, self.device_name)
-                except EcoflowMetricException as error:
-                    log.error(error)
-                    continue
-                log.info(f"Created new metric from payload key {metric.ecoflow_payload_key} -> {metric.name}")
-                self.metrics_collector.append(metric)
+            values = list(self.flatten_payload_value(ecoflow_payload_key, ecoflow_payload_value))
+            if not values:
+                # Empty arrays and known non-numeric arrays are skipped silently
+                if ecoflow_payload_value and not NON_NUMERIC_ARRAY_KEYS.search(ecoflow_payload_key):
+                    self.skip_unsupported_key(ecoflow_payload_key, ecoflow_payload_value)
+                continue
 
-            metric.set(ecoflow_payload_value)
+            for key, index, value in values:
+                self.set_metric(key, index, value)
 
-            if ecoflow_payload_key == 'inv.acInVol' and ecoflow_payload_value == 0:
-                ac_in_current = self.get_metric_by_ecoflow_payload_key('inv.acInAmp')
-                if ac_in_current:
-                    log.debug("Set AC inverter input current to zero because of zero inverter voltage")
-                    ac_in_current.set(0)
+    def set_metric(self, ecoflow_payload_key, index, value):
+        if ecoflow_payload_key in self.unsupported_keys:
+            return
+
+        metric = self.get_metric_by_ecoflow_payload_key(ecoflow_payload_key)
+        if not metric:
+            try:
+                metric = EcoflowMetric(ecoflow_payload_key, self.device_name, indexed=index is not None)
+            except EcoflowMetricException as error:
+                self.skip_unsupported_key(ecoflow_payload_key, error)
+                return
+            log.info(f"Created new metric from payload key {metric.ecoflow_payload_key} -> {metric.name}")
+            self.metrics_collector[ecoflow_payload_key] = metric
+
+        if metric.indexed != (index is not None):
+            self.skip_unsupported_key(ecoflow_payload_key, "the value changed between a number and an array")
+            return
+
+        metric.set(value, index)
+
+        if ecoflow_payload_key == 'inv.acInVol' and value == 0:
+            ac_in_current = self.get_metric_by_ecoflow_payload_key('inv.acInAmp')
+            if ac_in_current:
+                log.debug("Set AC inverter input current to zero because of zero inverter voltage")
+                ac_in_current.set(0)
 
 
 def signal_handler(signum, frame):
