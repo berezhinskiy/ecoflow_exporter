@@ -16,7 +16,7 @@ Unlike REST API exporters, it is not required to request for `APP_KEY` and `SECR
 The project provides:
 
 - [Python program](ecoflow_exporter.py) that accepts a number of arguments to collect information about a device and exports the collected metrics to a prometheus endpoint
-- [Dashboard for Grafana](https://grafana.com/grafana/dashboards/17812-ecoflow/)
+- [Dashboard for Grafana](https://grafana.com/grafana/dashboards/17812-ecoflow/) (its source is in [dashboard/ecoflow.json](dashboard/ecoflow.json))
 - [Docker image](https://github.com/berezhinskiy/ecoflow_exporter/pkgs/container/ecoflow_exporter) for your convenience
 - [Quick Start guide](docker-compose/) for your pleasure
 

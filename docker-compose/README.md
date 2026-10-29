@@ -121,7 +121,7 @@ de22630b4d3a   ghcr.io/berezhinskiy/ecoflow_exporter   "python /ecoflow_exp…" 
 
 Navigate to [http://localhost:3000](http://localhost:3000) in your web browser and use `GRAFANA_USERNAME` / `GRAFANA_PASSWORD` credentials from `.env` file to access Grafana. It is already configured with prometheus as the default datasource.
 
-Navigate to Dashboards → Import dashboard → import ID `17812`, select the only existing Prometheus datasource.
+Navigate to Dashboards → Import dashboard → import ID `17812` (or upload [dashboard/ecoflow.json](../dashboard/ecoflow.json) from this repository), select the only existing Prometheus datasource.
 
 ## Troubleshooting
 
