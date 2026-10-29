@@ -229,7 +229,11 @@ class EcoflowMetric:
         self.ecoflow_payload_key = ecoflow_payload_key
         self.device_name = device_name
         self.name = f"ecoflow_{self.convert_ecoflow_key_to_prometheus_name()}"
-        self.metric = Gauge(self.name, f"value from MQTT object key {ecoflow_payload_key}", labelnames=["device"])
+        try:
+            self.metric = Gauge(self.name, f"value from MQTT object key {ecoflow_payload_key}", labelnames=["device"])
+        except ValueError as error:
+            # E.g. two different payload keys are converted to the same metric name
+            raise EcoflowMetricException(f"Cannot create metric {self.name} from payload key {ecoflow_payload_key}: {error}")
 
     def convert_ecoflow_key_to_prometheus_name(self):
         # bms_bmsStatus.maxCellTemp -> bms_bms_status_max_cell_temp
@@ -242,7 +246,7 @@ class EcoflowMetric:
             new += character.lower()
         # Check that metric name complies with the data model for valid characters
         # https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
-        if not re.match("[a-zA-Z_:][a-zA-Z0-9_:]*", new):
+        if not re.fullmatch("[a-zA-Z_:][a-zA-Z0-9_:]*", new):
             raise EcoflowMetricException(f"Cannot convert payload key {self.ecoflow_payload_key} to comply with the Prometheus data model. Please, raise an issue!")
         return new
 
