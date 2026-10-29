@@ -86,6 +86,8 @@ Optional:
 
 `LOG_LEVEL` - (default: `INFO`) Possible values: `DEBUG`, `INFO`, `WARNING`, `ERROR`
 
+`MQTT_HANDSHAKE_INTERVAL` - (default: `30`) Interval in seconds to send the `latestQuotas` request, the same one the mobile application sends when the device page is opened. It makes the device start and keep streaming telemetry without the mobile application running. Set to `0` to disable periodic requests (the request is still sent once on every MQTT connect)
+
 - Example of running docker image:
 
 ```bash
