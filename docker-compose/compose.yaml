@@ -4,6 +4,7 @@ services:
     container_name: prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-1y}'
     ports:
       - 9090:9090
     restart: unless-stopped

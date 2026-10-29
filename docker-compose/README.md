@@ -82,6 +82,8 @@ ECOFLOW_PASSWORD="ECOFLOW_PASSWORD"
 GRAFANA_USERNAME="admin"
 # Password for Grafana Web interface
 GRAFANA_PASSWORD="grafana"
+# How long Prometheus keeps the data
+PROMETHEUS_RETENTION="1y"
 ```
 
 - Replace `<TELEGRAM_BOT_TOKEN>` and `<TELEGRAM_CHAT_ID>` with your values in [alertmanager.yaml](alertmanager/alertmanager.yml#L39-L40)
@@ -140,6 +142,18 @@ $ curl http://127.0.0.1:9091
 Navigate to [http://localhost:9090](http://localhost:9090) in your web browser to access directly the web interface of Prometheus. Check `Status` → `Targets`. The state of `ecoflow_exporter` should be `UP`. Otherwise, see the `Error` column.
 
 Navigate to [http://localhost:9093](http://localhost:9093) in your web browser to directly access the web interface of Alertmanager.
+
+### Grafana does not accept the password from `.env`
+
+`GRAFANA_USERNAME` and `GRAFANA_PASSWORD` are applied only when Grafana starts with an empty `grafana_data` volume. Changing them in `.env` afterwards has no effect: either log in with the old password and change it in Grafana, or reset it:
+
+```plain
+$ docker compose exec grafana grafana cli admin reset-admin-password <new password>
+```
+
+### Data retention
+
+Prometheus keeps the data for `PROMETHEUS_RETENTION` (default: `1y`) in the `prom_data` volume. With one device and the default 10 seconds scrape interval it takes roughly 4 GB per year (about 1 GB of exporter metrics, the rest are metrics of Prometheus itself). Data older than the retention period is deleted automatically. The exporter cannot provide data for the time it was not running.
 
 ## Destroy
 

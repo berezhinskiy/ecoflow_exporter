@@ -59,7 +59,8 @@ class EcoflowAuthentication:
         try:
             token = response["data"]["token"]
             user_id = response["data"]["user"]["userId"]
-            user_name = response["data"]["user"]["name"]
+            # The name is missing when no nickname is set in the account
+            user_name = response["data"]["user"].get("name") or user_id
         except KeyError as key:
             raise Exception(f"Failed to extract key {key} from response: {response}")
 

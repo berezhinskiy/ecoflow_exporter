@@ -59,13 +59,17 @@ ecoflow_kit_product_info_details_soc{device="XXXXXXXXXXXXXXXX",index="0"} 50.0
 
 ⚠️ This has only been tested with the following EcoFlow products:
 
+- __RIVER Pro__
 - __RIVER Max__
 - __RIVER 2__
 - __RIVER 2 Max__
+- __DELTA mini__
 - __DELTA Max__
 - __DELTA 2__
 - __DELTA 2 Max__
 - __DELTA Pro__
+
+Newer products that send binary (protobuf) MQTT payloads, like __RIVER 3__, __DELTA Pro Ultra__, __PowerStream__, __STREAM__ and __Power Kit__, are not supported yet (see [#78](https://github.com/berezhinskiy/ecoflow_exporter/issues/78)).
 
 Please, create an issue to let me know if exporter works well (or not) with your model.
 
