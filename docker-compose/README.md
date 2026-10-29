@@ -125,6 +125,49 @@ Navigate to [http://localhost:3000](http://localhost:3000) in your web browser a
 
 Navigate to Dashboards → Import dashboard → import ID `17812` (or upload [dashboard/ecoflow.json](../dashboard/ecoflow.json) from this repository), select the only existing Prometheus datasource.
 
+## Multiple devices
+
+Run one exporter per device. All metrics have the `device` label, so Prometheus, alerts and the Grafana dashboard work with several devices out of the box: select the device at the top of the dashboard.
+
+- Add the serial number of the second device to `.env`:
+
+```bash
+DEVICE_SN_2="DEVICE_SN_2"
+```
+
+- Add one more exporter to [compose.yaml](compose.yaml). It can use the same port, because Prometheus reaches every exporter by its container name:
+
+```yaml
+  ecoflow_exporter_2:
+    image: ghcr.io/berezhinskiy/ecoflow_exporter
+    container_name: ecoflow_exporter_2
+    restart: unless-stopped
+    environment:
+      DEVICE_SN: ${DEVICE_SN_2}
+      ECOFLOW_USERNAME: ${ECOFLOW_USERNAME}
+      ECOFLOW_PASSWORD: "${ECOFLOW_PASSWORD}"
+      EXPORTER_PORT: 9091
+```
+
+- Add it to the `ecoflow` job in [prometheus.yml](prometheus/prometheus.yml):
+
+```yaml
+  - job_name: ecoflow
+    static_configs:
+      - targets:
+          - ecoflow_exporter:9091
+          - ecoflow_exporter_2:9091
+```
+
+- Apply the changes:
+
+```plain
+$ docker compose up -d
+$ docker compose restart prometheus
+```
+
+> Do not run two exporters for the same device: they use the same MQTT client id and disconnect each other.
+
 ## Troubleshooting
 
 Check the logs:
