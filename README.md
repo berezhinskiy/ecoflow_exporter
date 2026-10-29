@@ -55,7 +55,7 @@ ecoflow_kit_product_info_details_soc{device="XXXXXXXXXXXXXXXX",index="0"} 50.0
 
 ⚠️ This project is in no way connected to EcoFlow company, and is entirely developed as a fun project with no guarantees of anything.
 
-⚠️ Unexpectedly, some values are always zero (like `ecoflow_bms_ems_status_fan_level` and `ecoflow_inv_fan_state`). It is not a bug in the exporter. No need to create an issue. The exporter just converts the MQTT payload to Prometheus format. It implements small hacks like [here](ecoflow_exporter.py#L248-L252), but in general, values is provided by the device as it is. To dive into received payloads, enable `DEBUG` logging.
+⚠️ Unexpectedly, some values are always zero (like `ecoflow_bms_ems_status_fan_level` and `ecoflow_inv_fan_state`). It is not a bug in the exporter. No need to create an issue. The exporter just converts the MQTT payload to Prometheus format. It implements small hacks like [here](ecoflow_exporter.py#L364-L368), but in general, values is provided by the device as it is. To dive into received payloads, enable `DEBUG` logging.
 
 ⚠️ This has only been tested with the following EcoFlow products:
 

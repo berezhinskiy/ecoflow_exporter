@@ -361,6 +361,12 @@ class Worker:
             for key, index, value in values:
                 self.set_metric(key, index, value)
 
+        # The device keeps reporting the last AC input current after AC is unplugged. The order of keys in the payload
+        # varies, so fix the current only after the whole payload is processed
+        if params.get('inv.acInVol') == 0 and self.get_metric_by_ecoflow_payload_key('inv.acInAmp'):
+            log.debug("Set AC inverter input current to zero because of zero inverter voltage")
+            self.set_metric('inv.acInAmp', None, 0)
+
     def set_metric(self, ecoflow_payload_key, index, value):
         if ecoflow_payload_key in self.unsupported_keys:
             return
@@ -380,12 +386,6 @@ class Worker:
             return
 
         metric.set(value, index)
-
-        if ecoflow_payload_key == 'inv.acInVol' and value == 0:
-            ac_in_current = self.get_metric_by_ecoflow_payload_key('inv.acInAmp')
-            if ac_in_current:
-                log.debug("Set AC inverter input current to zero because of zero inverter voltage")
-                ac_in_current.set(0)
 
 
 def signal_handler(signum, frame):
