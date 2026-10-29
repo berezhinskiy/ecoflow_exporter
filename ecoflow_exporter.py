@@ -11,7 +11,6 @@ import uuid
 import random
 from queue import Queue
 from threading import Timer
-from multiprocessing import Process
 import requests
 import paho.mqtt.client as mqtt
 from prometheus_client import start_http_server, REGISTRY, Gauge, Counter
@@ -28,10 +27,11 @@ class EcoflowMetricException(Exception):
 
 
 class EcoflowAuthentication:
-    def __init__(self, ecoflow_username, ecoflow_password, ecoflow_api_host):
+    def __init__(self, ecoflow_username, ecoflow_password, ecoflow_api_host, device_sn):
         self.ecoflow_username = ecoflow_username
         self.ecoflow_password = ecoflow_password
         self.ecoflow_api_host = ecoflow_api_host
+        self.device_sn = device_sn
         self.mqtt_url = "mqtt.ecoflow.com"
         self.mqtt_port = 8883
         self.mqtt_username = None
@@ -49,7 +49,7 @@ class EcoflowAuthentication:
                 "userType": "ECOFLOW"}
 
         log.info(f"Login to EcoFlow API {url}")
-        request = requests.post(url, json=data, headers=headers)
+        request = requests.post(url, json=data, headers=headers, timeout=30)
         response = self.get_json_response(request)
 
         try:
@@ -66,7 +66,7 @@ class EcoflowAuthentication:
         data = {"userId": user_id}
 
         log.info(f"Requesting IoT MQTT credentials {url}")
-        request = requests.get(url, data=data, headers=headers)
+        request = requests.get(url, data=data, headers=headers, timeout=30)
         response = self.get_json_response(request)
 
         try:
@@ -74,7 +74,10 @@ class EcoflowAuthentication:
             self.mqtt_port = int(response["data"]["port"])
             self.mqtt_username = response["data"]["certificateAccount"]
             self.mqtt_password = response["data"]["certificatePassword"]
-            self.mqtt_client_id = f"ANDROID_{str(uuid.uuid4()).upper()}_{user_id}"
+            # EcoFlow limits the number of distinct client ids per account per day, so keep it stable across restarts.
+            # The device serial number makes it unique for every exporter instance of the same account
+            client_uuid = uuid.uuid5(uuid.NAMESPACE_OID, f"{user_id}_{self.device_sn}")
+            self.mqtt_client_id = f"ANDROID_{str(client_uuid).upper()}_{user_id}"
             self.user_id = user_id
         except KeyError as key:
             raise Exception(f"Failed to extract key {key} from {response}")
@@ -150,22 +153,15 @@ class EcoflowMQTT():
     def idle_reconnect(self):
         if self.last_message_time and time.time() - self.last_message_time > self.timeout_seconds:
             log.error(f"No messages received for {self.timeout_seconds} seconds. Reconnecting to MQTT")
-            # We pull the following into a separate process because there are actually quite a few things that can go
-            # wrong inside the connection code, including it just timing out and never returning. So this gives us a
-            # measure of safety around reconnection
-            while True:
-                connect_process = Process(target=self.connect)
-                connect_process.start()
-                connect_process.join(timeout=60)
-                connect_process.terminate()
-                if connect_process.exitcode == 0:
-                    log.info("Reconnection successful, continuing")
-                    # Reset last_message_time here to avoid a race condition between idle_reconnect getting called again
-                    # before on_connect() or on_message() are called
-                    self.last_message_time = None
-                    break
-                else:
-                    log.error("Reconnection errored out, or timed out, attempted to reconnect...")
+            try:
+                self.connect()
+            except Exception as error:
+                # Keep last_message_time as is, so the next idle_reconnect call retries the connection
+                log.error(f"Reconnection failed: {error}. Will retry")
+                return
+            log.info("Reconnection successful, continuing")
+            # Give the new connection a full timeout before the next reconnection attempt
+            self.last_message_time = time.time()
 
     def handshake(self):
         # Mimic the mobile app opening the device page: request all latest quotas. The device replies with a full
@@ -218,8 +214,14 @@ class EcoflowMQTT():
             time.sleep(5)
 
     def on_message(self, client, userdata, message):
-        self.message_queue.put(message.payload.decode("utf-8"))
         self.last_message_time = time.time()
+        try:
+            payload = message.payload.decode("utf-8")
+        except UnicodeDecodeError:
+            # Newer devices send binary (protobuf) payloads which are not supported yet
+            log.debug(f"Skipping non UTF-8 MQTT payload from {message.topic}: {message.payload.hex()}")
+            return
+        self.message_queue.put(payload)
 
 
 class EcoflowMetric:
@@ -381,7 +383,7 @@ def main():
         sys.exit(1)
 
     try:
-        auth = EcoflowAuthentication(ecoflow_username, ecoflow_password, ecoflow_api_host)
+        auth = EcoflowAuthentication(ecoflow_username, ecoflow_password, ecoflow_api_host, device_sn)
     except Exception as error:
         log.error(error)
         sys.exit(1)
