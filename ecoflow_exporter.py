@@ -291,34 +291,46 @@ class Worker:
             queue_size = self.message_queue.qsize()
             if queue_size > 0:
                 log.info(f"Processing {queue_size} event(s) from the message queue")
-                self.online.labels(device=self.device_name).set(1)
                 self.mqtt_messages_receive_total.labels(device=self.device_name).inc(queue_size)
+
+            # The device is online only if it sent its data. E.g. the broker replies to the latestQuotas request for an
+            # offline device too, but without quotas
+            device_data_received = False
+            while not self.message_queue.empty():
+                payload = self.message_queue.get()
+                log.debug(f"Recived payload: {payload}")
+
+                try:
+                    payload = json.loads(payload)
+                except Exception as error:
+                    log.error(f"Failed to parse MQTT payload: {payload} Error: {error}")
+                    continue
+
+                if not isinstance(payload, dict):
+                    log.error(f"Unexpected MQTT payload: {payload}")
+                    continue
+                if 'params' in payload:
+                    params = payload['params']
+                elif isinstance(payload.get('data'), dict) and 'quotaMap' in payload['data']:
+                    params = payload['data']['quotaMap']
+                else:
+                    log.debug(f"Skipping payload without device data: {payload.get('message', payload)}")
+                    continue
+
+                device_data_received = True
+                self.process_payload(params)
+
+            if device_data_received:
+                self.online.labels(device=self.device_name).set(1)
             else:
-                log.info("Message queue is empty. Assuming that the device is offline")
+                if queue_size > 0:
+                    log.info("No data received from the device. Assuming that the device is offline")
+                else:
+                    log.info("Message queue is empty. Assuming that the device is offline")
                 self.online.labels(device=self.device_name).set(0)
                 # Clear metrics for NaN (No data) instead of last value
                 for metric in self.metrics_collector.values():
                     metric.clear()
-
-            while not self.message_queue.empty():
-                payload = self.message_queue.get()
-                log.debug(f"Recived payload: {payload}")
-                if payload is None:
-                    continue
-
-                try:
-                    payload = json.loads(payload)
-                    if 'params' in payload:
-                        params = payload['params']
-                    else:
-                        params = payload['data']['quotaMap']
-                except (KeyError, TypeError) as key:
-                    log.error(f"Failed to extract key {key} from payload: {payload}")
-                    continue
-                except Exception as error:
-                    log.error(f"Failed to parse MQTT payload: {payload} Error: {error}")
-                    continue
-                self.process_payload(params)
 
             time.sleep(self.collecting_interval_seconds)
 
